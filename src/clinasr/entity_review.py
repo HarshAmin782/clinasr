@@ -96,13 +96,24 @@ def agreement(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
     p_human = (confusion[("preserved", "preserved")] + confusion[("not_preserved", "preserved")]) / n
     p_e = p_auto * p_human + (1 - p_auto) * (1 - p_human)
     kappa = (p_o - p_e) / (1 - p_e) if p_e < 1 else None
+    per_class = {}
+    for cls in ("preserved", "not_preserved"):
+        other = "not_preserved" if cls == "preserved" else "preserved"
+        tp = confusion[(cls, cls)]
+        fp = confusion[(cls, other)]  # auto says cls, reference label says other
+        fn = confusion[(other, cls)]
+        precision = tp / (tp + fp) if tp + fp else None
+        recall = tp / (tp + fn) if tp + fn else None
+        f1 = 2 * precision * recall / (precision + recall) if precision and recall else None
+        per_class[cls] = {"precision": precision, "recall": recall, "f1": f1, "support_in_labels": tp + fn}
     return {
         "n_labelled": n,
         "n_unclear": unclear,
         "n_blank": blank,
         "observed_agreement": p_o,
         "cohen_kappa": kappa,
+        "per_class_auto_vs_labels": per_class,
         "confusion_auto_vs_human": {f"{a}->{h}": c for (a, h), c in confusion.items()},
         "agreement_by_auto_status": {k: v["agree"] / v["n"] for k, v in by_status.items()},
-        "note": "Agreement on a stratified sample; not a population estimate of label accuracy.",
+        "note": "Agreement on a sample stratified by model x automatic label; not representative of the dataset and not a population estimate of label accuracy.",
     }

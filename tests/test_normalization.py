@@ -62,3 +62,47 @@ def test_v1_keeps_attached_units():
 
     assert normalize_text("400mg", NORMALIZATION_V1) == "400mg"
     assert NORMALIZATION_V1.version == "v1"
+
+
+# ---- v3 hyphen rule -------------------------------------------------------
+import pytest  # noqa: E402
+
+from clinasr.normalization import NORMALIZATION_V2, NORMALIZATION_V3  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("statin-induced myopathy", "statin induced myopathy"),
+        ("CT-scan of the thorax", "ct scan of the thorax"),
+        ("non-tender abdomen", "non tender abdomen"),
+        ("X-ray chest", "x ray chest"),
+        ("anti-HBs positive", "anti hbs positive"),
+        ("COVID-19", "covid 19"),
+        ("beta-blocker", "beta blocker"),
+        # ranges and schedules keep their hyphen
+        ("sleep 6-8 hours", "sleep 6-8 hours"),
+        ("dose 1-0-1", "dose 1-0-1"),
+        # negative values keep their minus sign
+        ("temperature -5 degrees", "temperature -5 degrees"),
+        ("-2.5 SD", "-2.5 sd"),
+        ("(-3)", "-3"),
+        # unicode dashes are mapped first
+        ("6\u20138 hours", "6-8 hours"),
+        ("statin\u2010induced", "statin induced"),
+        ("value \u22124", "value -4"),
+    ],
+)
+def test_v3_hyphen_rule(text, expected):
+    assert normalize_text(text, NORMALIZATION_V3) == expected
+
+
+def test_v2_unchanged_by_v3_addition():
+    assert NORMALIZATION_V2.version == "v2" and NORMALIZATION_V2.split_hyphens is False
+    assert normalize_text("statin-induced myopathy", NORMALIZATION_V2) == "statin-induced myopathy"
+    assert normalize_text("Zentel 400mg", NORMALIZATION_V2) == "zentel 400 mg"
+
+
+def test_v3_hyphen_word_break_does_not_merge_tokens():
+    # The rule only ever ADDS a word break; "xray" is not equated with "x ray".
+    assert normalize_text("xray", NORMALIZATION_V3) == "xray"

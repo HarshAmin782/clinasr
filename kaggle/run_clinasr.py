@@ -1,14 +1,14 @@
 """GENERATED FILE -- DO NOT EDIT DIRECTLY.
 
 Built by scripts/build_kaggle_script.py from src/clinasr/*.py.
-Source commit: e38c094e38b7
+Source commit: 27b4cd080c26
 To change behavior, edit the source modules under src/clinasr/ and
 rebuild. This file is what Kaggle CLI uploads as the single code_file.
 """
 
 from __future__ import annotations
 
-# ---- begin src/clinasr/normalization.py (sha256:f50f60c2664ed7d3) ----
+# ---- begin src/clinasr/normalization.py (sha256:2b256ceb9d98046c) ----
 """Text normalization for WER/CER scoring.
 
 Policy (documented per PROJECT_SPEC.md "Measurements" section):
@@ -41,6 +41,33 @@ _WHITESPACE_PATTERN = re.compile(r"\s+")
 _NUMBER_UNIT_PATTERN = re.compile(r"(\d)(mg|mcg|gm|g|ml|iu|units?)(?![a-z])")
 
 
+# Unicode hyphens/dashes that v3 maps to ASCII "-" before hyphen handling.
+_DASHES = dict.fromkeys(map(ord, "‐‑‒–—―−"), "-")
+
+
+def _split_hyphens(text: str) -> str:
+    """v3 rule: a hyphen becomes a word break, EXCEPT
+    - between two digits (ranges / schedules: "6-8", "1-0-1"), and
+    - as a minus sign: followed by a digit and preceded by start-of-text or
+      a non-alphanumeric character ("-5", "temp -2.5").
+    This is a lexical rule ("statin-induced" == "statin induced"); it does
+    not claim the hyphenated and spaced forms are clinically equivalent in
+    general, only that they are spelling variants of the same words.
+    """
+    chars = list(text.translate(_DASHES))
+    for i, ch in enumerate(chars):
+        if ch != "-":
+            continue
+        prev = chars[i - 1] if i > 0 else ""
+        nxt = chars[i + 1] if i + 1 < len(chars) else ""
+        if prev.isdigit() and nxt.isdigit():
+            continue
+        if nxt.isdigit() and (prev == "" or not prev.isalnum()):
+            continue
+        chars[i] = " "
+    return "".join(chars)
+
+
 def _strip_punctuation(text: str, preserve_inter_digit: bool) -> str:
     """Replace strippable punctuation with a space, one character at a time.
 
@@ -69,6 +96,9 @@ class NormalizationConfig:
     collapse_whitespace: bool = True
     unicode_normalize_form: str = "NFKC"
     split_number_unit: bool = True
+    # v3: hyphens were never in _PUNCT_CHARS, so v1/v2 kept "statin-induced"
+    # as one token. Off by default so v2 results stay exactly reproducible.
+    split_hyphens: bool = False
     version: str = "v2"
 
 
@@ -76,6 +106,9 @@ DEFAULT_NORMALIZATION = NormalizationConfig()
 # The policy Stage 2 (run 20261029T162830Z) was scored with, kept so those
 # numbers stay reproducible.
 NORMALIZATION_V1 = NormalizationConfig(split_number_unit=False, version="v1")
+NORMALIZATION_V2 = DEFAULT_NORMALIZATION
+NORMALIZATION_V3 = NormalizationConfig(split_hyphens=True, version="v3")
+NORMALIZATION_VERSIONS = {"v1": NORMALIZATION_V1, "v2": NORMALIZATION_V2, "v3": NORMALIZATION_V3}
 
 
 def normalize_text(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATION) -> str:
@@ -91,6 +124,8 @@ def normalize_text(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATIO
         text = unicodedata.normalize(config.unicode_normalize_form, text)
     if config.lowercase:
         text = text.lower()
+    if config.split_hyphens:
+        text = _split_hyphens(text)
     if config.strip_punctuation:
         text = _strip_punctuation(text, config.preserve_inter_digit_punctuation)
     if config.split_number_unit:
