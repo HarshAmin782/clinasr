@@ -1,0 +1,16 @@
+# Local dev/test dependencies only. No GPU, no torch, no transformers --
+# those are Kaggle-side (see requirements-kaggle.txt) and are intentionally
+# absent here per AGENTS.md ("Local Python is for unit tests, metadata, and
+# Kaggle CLI only").
+#
+# Versions below are floors actually verified installable on this machine's
+# Python 3.9 on 2026-10-29 (see docs/WORKLOG.md) -- not guessed.
+pytest>=8.4.2
+jiwer>=4.0.0
+numpy>=2.0.2
+
+# Kaggle CLI is NOT installed on this machine as of 2026-10-29, so no floor
+# version is asserted here (would be an invented number). Install with
+# `pip install --upgrade kaggle` per README.md and record the resolved
+# version with `kaggle --version` before relying on a specific flag/behavior.
+kaggle

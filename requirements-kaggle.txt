@@ -1,0 +1,17 @@
+# Packages the Kaggle GPU runtime needs that may not already be in the
+# kernel's base image. Deliberately UNVERSIONED: this machine has no GPU and
+# no network-verified view of the current Kaggle Docker image, so pinning
+# exact torch/transformers/datasets versions here would be an invented
+# number (forbidden by AGENTS.md's research-integrity rules). Phase 1 pins
+# these for real once the Kaggle smoke-test run reports what actually
+# resolved -- the runtime mechanism for that is already in place:
+# clinasr.config.resolve_installed_versions() records every ACTUAL resolved
+# version into experiment_config.json / the run manifest on every run, so
+# the true versions used are always traceable even before this file is
+# pinned. See docs/ISSUES.md.
+transformers
+datasets
+jiwer
+pandas
+matplotlib
+soundfile

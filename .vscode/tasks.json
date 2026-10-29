@@ -1,0 +1,60 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ClinASR: Local pytest",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe -m pytest -q",
+      "problemMatcher": []
+    },
+    {
+      "label": "ClinASR: Build Kaggle script",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe scripts/build_kaggle_script.py",
+      "problemMatcher": []
+    },
+    {
+      "label": "ClinASR: Check Kaggle script is up to date",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe scripts/build_kaggle_script.py --check",
+      "problemMatcher": []
+    },
+    {
+      "label": "ClinASR: Self-test bundled Kaggle script (no GPU)",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe kaggle/run_clinasr.py --self-test",
+      "problemMatcher": []
+    },
+    {
+      "label": "ClinASR: Kaggle push + run (opt-in, asks for confirmation)",
+      "type": "shell",
+      "command": "python scripts/kaggle_workflow.py push --confirm --budget-minutes ${input:gpuBudgetMinutes}",
+      "problemMatcher": []
+    },
+    {
+      "label": "ClinASR: Kaggle status",
+      "type": "shell",
+      "command": "python scripts/kaggle_workflow.py status",
+      "problemMatcher": []
+    },
+    {
+      "label": "ClinASR: Kaggle logs",
+      "type": "shell",
+      "command": "python scripts/kaggle_workflow.py logs",
+      "problemMatcher": []
+    },
+    {
+      "label": "ClinASR: Download results (new timestamped folder)",
+      "type": "shell",
+      "command": "python scripts/kaggle_workflow.py fetch",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "gpuBudgetMinutes",
+      "type": "promptString",
+      "description": "Your own estimate of this run's GPU minutes (logged locally; this tool cannot see your real Kaggle quota)."
+    }
+  ]
+}
