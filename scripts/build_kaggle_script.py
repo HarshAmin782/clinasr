@@ -51,6 +51,7 @@ MODULE_ORDER = [
     "smoke_test",
     "sampling",
     "stage2",
+    "stage4",
     "kaggle_entrypoint",
 ]
 
