@@ -47,6 +47,7 @@ MODULE_ORDER = [
     "config",
     "run_manifest",
     "schema_audit",
+    "smoke_test",
     "kaggle_entrypoint",
 ]
 

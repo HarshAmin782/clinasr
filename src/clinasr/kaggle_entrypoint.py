@@ -1,15 +1,16 @@
 """Entry point bundled into kaggle/run_clinasr.py by scripts/build_kaggle_script.py.
 
-Phase-0 scope (this repository-hardening pass): this entrypoint does NOT run
-any ASR model and does NOT touch the EkaCare dataset. It only proves that
-the packaging pipeline (src/clinasr -> single self-contained script) carries
-real, tested logic end-to-end: environment reporting, the schema-audit
-engine against a tiny inline fixture, and an ExperimentConfig skeleton with
-versions resolved from whatever environment actually runs the script.
+`--self-test` (no GPU, no dataset, no model): proves the packaging pipeline
+(src/clinasr -> single self-contained script) carries real, tested logic
+end-to-end -- environment reporting, the schema-audit engine against a tiny
+inline fixture, and an ExperimentConfig skeleton with versions resolved
+from whatever environment actually runs the script.
 
-Phase 1 (prompts/01-build.md) replaces the body of `main()` with the real
-five-sample smoke test, reusing the same clinasr.normalization/metrics/
-config/run_manifest modules bundled here -- no duplicated logic.
+Default mode (no flags): runs the real Phase 1 five-sample smoke test
+(clinasr.smoke_test.run_smoke_test) against the live EkaCare dataset with
+openai/whisper-tiny.en. This needs network access and a Kaggle GPU runtime
+with (or able to pip-install) torch/transformers/datasets/torchcodec; it is
+not exercised by this repository's unit tests.
 """
 
 from __future__ import annotations
@@ -17,10 +18,12 @@ from __future__ import annotations
 import argparse
 import platform
 import sys
+from pathlib import Path
 
 from clinasr.config import ExperimentConfig, ModelSpec, NoiseConfig, SampleSelection, resolve_installed_versions
 from clinasr.normalization import NormalizationConfig
 from clinasr.schema_audit import audit_records
+from clinasr.smoke_test import MODEL_ID, SMOKE_TEST_N, run_smoke_test
 
 
 def _report_environment() -> None:
@@ -69,11 +72,23 @@ def _self_test_config_skeleton() -> None:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="ClinASR Kaggle entrypoint (Phase-0 placeholder)")
+    parser = argparse.ArgumentParser(description="ClinASR Kaggle entrypoint")
     parser.add_argument(
         "--self-test",
         action="store_true",
         help="Run packaging self-checks only; no dataset access, no model inference.",
+    )
+    parser.add_argument(
+        "--n",
+        type=int,
+        default=SMOKE_TEST_N,
+        help=f"Number of smoke-test samples (default {SMOKE_TEST_N}).",
+    )
+    parser.add_argument("--model-id", default=MODEL_ID, help=f"Model to run (default {MODEL_ID}).")
+    parser.add_argument(
+        "--output-dir",
+        default="/kaggle/working",
+        help="Where to write predictions.csv/summary_metrics.csv/experiment_config.json.",
     )
     args = parser.parse_args(argv)
 
@@ -85,11 +100,7 @@ def main(argv=None) -> int:
         print("self-test: OK (no inference performed)")
         return 0
 
-    print(
-        "ClinASR Phase 1 (ASR inference) is not implemented yet. "
-        "Run with --self-test to verify packaging, or see prompts/01-build.md."
-    )
-    return 0
+    return run_smoke_test(Path(args.output_dir), n=args.n, model_id=args.model_id)
 
 
 if __name__ == "__main__":

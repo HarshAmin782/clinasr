@@ -14,4 +14,12 @@ datasets
 jiwer
 pandas
 matplotlib
-soundfile
+
+# Needed to decode the real dataset's Audio feature under datasets>=4.x
+# (torchcodec, not soundfile/librosa, is that library's decode backend as of
+# 2026-10-29). Depends on torch, which Kaggle's image already provides;
+# installing a mismatched torchcodec build against Kaggle's preinstalled
+# torch/CUDA is the main run-time risk here -- see docs/ISSUES.md #8.
+# clinasr.smoke_test.ensure_installed() reports (not silently swallows) an
+# install failure for this package.
+torchcodec
