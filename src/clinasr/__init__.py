@@ -12,10 +12,13 @@ __all__ = [
     "normalization",
     "metrics",
     "entities",
+    "medical_entities",
     "noise",
     "config",
     "run_manifest",
     "schema_audit",
     "smoke_test",
+    "sampling",
+    "stage2",
     "kaggle_entrypoint",
 ]

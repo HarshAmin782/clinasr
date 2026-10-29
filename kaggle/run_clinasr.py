@@ -1,7 +1,7 @@
 """GENERATED FILE -- DO NOT EDIT DIRECTLY.
 
 Built by scripts/build_kaggle_script.py from src/clinasr/*.py.
-Source commit: aa34eda4b915
+Source commit: f96c5f60bc95
 To change behavior, edit the source modules under src/clinasr/ and
 rebuild. This file is what Kaggle CLI uploads as the single code_file.
 """
@@ -219,16 +219,18 @@ def compute_metrics(
     ]
 # ---- end src/clinasr/metrics.py ----
 
-# ---- begin src/clinasr/entities.py (sha256:b4a61fa55072132a) ----
+# ---- begin src/clinasr/entities.py (sha256:2650bb25c957a318) ----
 """Medical-entity preservation matching.
 
-This module is schema-agnostic on purpose: PROJECT_SPEC.md and
-prompts/03-medical-entities.md both require inspecting the real
-`medical_entities` annotation structure on the EkaCare dataset BEFORE
-writing dataset-specific metrics. That inspection (schema_audit.py, run
-against the live dataset) has not happened yet in this repository, so this
-module only provides the generic matching engine. Phase 3 adapts the real
-annotation records into `EntitySpan` objects and wires this engine in.
+This module is the schema-agnostic matching engine. Parsing the real
+EkaCare `medical_entities` annotation format into `EntitySpan` objects lives
+in clinasr.medical_entities, which depends on this module (not the other
+way round).
+
+VALIDATION STATUS: these matching rules have NOT been validated against
+human judgement on real ASR output yet. Summary numbers from `summarize()`
+are therefore reported as an unvalidated "match_rate", never as entity
+recall/precision, and carry `"validated": False`.
 
 Matching policy (avoids the "optimistic substring match" failure mode
 explicitly called out in prompts/03-medical-entities.md, e.g. the digits
@@ -245,17 +247,15 @@ explicitly called out in prompts/03-medical-entities.md, e.g. the digits
 Raw hypothesis text is always preserved on the result so downstream review
 can distinguish "matched" from "a human should double check this."
 
-Substitution and false-positive detection (an entity-shaped token appearing
-in the hypothesis that does not correspond to any reference entity) require
-knowing which hypothesis tokens are "entity-shaped" for the real dataset,
-which depends on the annotation schema this module deliberately does not
-assume. That detection is Phase 3 work once schema_audit.py has run against
-the live dataset; see docs/ISSUES.md.
+Substitution and false-positive detection are NOT implemented: deciding
+that a hypothesis token sequence is a *wrong* entity (rather than ordinary
+non-entity speech) needs a validated entity recognizer or lexicon for the
+hypothesis side, which this project does not have yet. See docs/ISSUES.md.
 """
 
 
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 
 
@@ -264,12 +264,16 @@ class EntitySpan:
     text: str
     entity_type: Optional[str] = None
     entity_id: Optional[str] = None
+    # Character offsets into the reference transcript, as (start, end)
+    # pairs, end-exclusive. A tuple of pairs because the real annotation
+    # format allows several spans per entity.
+    offsets: Optional[Tuple[Tuple[int, int], ...]] = None
 
 
 @dataclass(frozen=True)
 class EntityMatchResult:
     entity: EntitySpan
-    status: str  # "exact" | "normalized" | "omitted" | "false_positive_only"
+    status: str  # "exact" | "normalized" | "omitted"
     hypothesis_raw: str
 
 
@@ -325,15 +329,330 @@ def summarize(results: Sequence[EntityMatchResult]) -> dict:
     counts = {"exact": 0, "normalized": 0, "omitted": 0}
     for r in results:
         counts[r.status] = counts.get(r.status, 0) + 1
-    recall = (counts["exact"] + counts["normalized"]) / total if total else None
+    match_rate = (counts["exact"] + counts["normalized"]) / total if total else None
     return {
         "n_entities": total,
         "n_exact": counts["exact"],
         "n_normalized": counts["normalized"],
         "n_omitted": counts["omitted"],
-        "recall": recall,
+        "match_rate": match_rate,
+        "validated": False,
     }
+
+
+def summarize_by_type(results: Sequence[EntityMatchResult]) -> dict:
+    """`summarize()` broken down by `entity.entity_type`."""
+    groups: dict = {}
+    for r in results:
+        groups.setdefault(r.entity.entity_type, []).append(r)
+    return {entity_type: summarize(group) for entity_type, group in sorted(groups.items(), key=lambda kv: str(kv[0]))}
 # ---- end src/clinasr/entities.py ----
+
+# ---- begin src/clinasr/medical_entities.py (sha256:605f316b3447ccce) ----
+"""Adapter for the EkaCare dataset's real `medical_entities` annotations.
+
+Observed format (real records, 2026-10-29; see docs/WORKLOG.md): the field
+is a JSON-encoded STRING holding a list of entries, each entry exactly
+
+    [entity_text, category, [[start, end], ...]]
+
+e.g. '[["azithromycin", "drugs", [[51, 63]]]]', where (start, end) are
+end-exclusive character offsets into the record's `text`. An empty
+annotation is the string '[]'. Observed categories: clinical_findings,
+drugs, advices, diagnostics, misc_medical. There is NO separate dosage
+category -- dosage strings such as "500 mg" or "25 mcg" appear inside
+`drugs` entities, so dosage detection here is a documented heuristic.
+
+Parsing is defensive even though no malformed record has been observed
+yet: the full split has not been inspected, and a crash or a silently
+dropped entity would bias any entity metric. Every parse keeps the raw
+string and reports a status plus per-entry problems.
+
+Nothing in this module reports entity precision/recall: the matching rules
+in clinasr.entities have not been validated (see `validated: False`).
+"""
+
+
+import json
+import re
+from collections import Counter
+from dataclasses import dataclass, field
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+
+
+STATUS_OK = "ok"
+STATUS_EMPTY = "empty"
+STATUS_MISSING = "missing"
+STATUS_MALFORMED = "malformed"
+STATUS_PARTIAL = "partial"
+STATUS_UNUSABLE = "unusable"
+
+DRUG_CATEGORY = "drugs"
+
+# Heuristic only: a number followed by a common dose unit.
+_DOSAGE_PATTERN = re.compile(
+    r"\b\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|gm|ml|iu|units?|%)(?![a-z])",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class ParsedAnnotation:
+    raw: Any
+    status: str
+    entities: Tuple[EntitySpan, ...] = ()
+    problems: Tuple[str, ...] = ()
+
+
+def _parse_offsets(value: Any) -> Optional[Tuple[Tuple[int, int], ...]]:
+    if not isinstance(value, (list, tuple)) or not value:
+        return None
+    pairs = []
+    for pair in value:
+        if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+            return None
+        start, end = pair
+        if isinstance(start, bool) or isinstance(end, bool):
+            return None
+        if not isinstance(start, int) or not isinstance(end, int):
+            return None
+        if start < 0 or end <= start:
+            return None
+        pairs.append((start, end))
+    return tuple(pairs)
+
+
+def parse_medical_entities(raw: Any) -> ParsedAnnotation:
+    """Parse one record's raw `medical_entities` value. Never raises."""
+    if raw is None:
+        return ParsedAnnotation(raw=raw, status=STATUS_MISSING)
+    if isinstance(raw, str):
+        if not raw.strip():
+            return ParsedAnnotation(raw=raw, status=STATUS_MISSING, problems=("blank_string",))
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, ValueError) as exc:
+            return ParsedAnnotation(raw=raw, status=STATUS_MALFORMED, problems=(f"invalid_json: {exc}",))
+    elif isinstance(raw, list):
+        data = raw  # tolerate an already-decoded list
+    else:
+        return ParsedAnnotation(raw=raw, status=STATUS_MALFORMED, problems=(f"unexpected_type: {type(raw).__name__}",))
+
+    if not isinstance(data, list):
+        return ParsedAnnotation(raw=raw, status=STATUS_MALFORMED, problems=(f"top_level_not_list: {type(data).__name__}",))
+    if not data:
+        return ParsedAnnotation(raw=raw, status=STATUS_EMPTY)
+
+    entities: List[EntitySpan] = []
+    problems: List[str] = []
+    for index, entry in enumerate(data):
+        if not isinstance(entry, (list, tuple)) or len(entry) != 3:
+            problems.append(f"entry_{index}: not_a_3_element_list")
+            continue
+        text, category, offsets_raw = entry
+        if not isinstance(text, str) or not text.strip():
+            problems.append(f"entry_{index}: missing_text")
+            continue
+        if not isinstance(category, str) or not category.strip():
+            problems.append(f"entry_{index}: missing_category")
+            continue
+        offsets = _parse_offsets(offsets_raw)
+        if offsets is None:
+            # Entity text is still usable for text matching; keep it.
+            problems.append(f"entry_{index}: bad_offsets")
+        entities.append(EntitySpan(text=text, entity_type=category, entity_id=str(index), offsets=offsets))
+
+    if not entities:
+        status = STATUS_UNUSABLE
+    elif problems:
+        status = STATUS_PARTIAL
+    else:
+        status = STATUS_OK
+    return ParsedAnnotation(raw=raw, status=status, entities=tuple(entities), problems=tuple(problems))
+
+
+def offsets_align(entity: EntitySpan, reference_text: Optional[str]) -> Optional[bool]:
+    """True if every offset span slices exactly the entity text out of the
+    reference (case-sensitive); None if there is nothing to check."""
+    if not entity.offsets or reference_text is None:
+        return None
+    return all(reference_text[start:end] == entity.text for start, end in entity.offsets)
+
+
+def is_dosage_like(text: str) -> bool:
+    """Heuristic: does this text contain a number + dose unit (e.g. "500 mg")?"""
+    return bool(_DOSAGE_PATTERN.search(text or ""))
+
+
+def assert_unique_ids(ids: Sequence[Any], id_name: str = "file_name") -> None:
+    """Raise ValueError if any id is missing or repeated. Stage 2 compares
+    models by sample id, so a duplicate would silently corrupt every join."""
+    missing = [i for i, value in enumerate(ids) if value is None or (isinstance(value, str) and not value.strip())]
+    if missing:
+        raise ValueError(f"{len(missing)} record(s) have no {id_name} (positions {missing[:10]})")
+    duplicates = sorted(str(value) for value, count in Counter(ids).items() if count > 1)
+    if duplicates:
+        raise ValueError(f"duplicate {id_name} values ({len(duplicates)}): {duplicates[:10]}")
+
+
+def _problem_kind(problem: str) -> str:
+    # "entry_3: bad_offsets" -> "bad_offsets"; "invalid_json: <msg>" -> "invalid_json"
+    if problem.startswith("entry_"):
+        return problem.split(": ", 1)[-1]
+    return problem.split(":", 1)[0]
+
+
+@dataclass
+class CoverageReport:
+    n_records: int = 0
+    status_counts: Dict[str, int] = field(default_factory=dict)
+    n_samples_with_entities: int = 0
+    n_entities: int = 0
+    category_entity_counts: Dict[str, int] = field(default_factory=dict)
+    category_sample_counts: Dict[str, int] = field(default_factory=dict)
+    n_samples_with_drugs: int = 0
+    n_dosage_like_drug_entities: int = 0
+    n_samples_with_dosage_like_drug_entity: int = 0
+    n_dosage_like_entities_other_categories: int = 0
+    n_entities_with_offsets: int = 0
+    n_offsets_aligned: int = 0
+    n_offsets_misaligned: int = 0
+    misaligned_examples: List[Dict[str, Any]] = field(default_factory=list)
+    problem_counts: Dict[str, int] = field(default_factory=dict)
+    unusable_sample_ids: List[str] = field(default_factory=list)
+
+
+def analyze_coverage(
+    records: Iterable[Dict[str, Any]],
+    id_field: str = "file_name",
+    text_field: str = "text",
+    entities_field: str = "medical_entities",
+    max_examples: int = 10,
+) -> CoverageReport:
+    report = CoverageReport()
+    status_counts: Counter = Counter()
+    category_entities: Counter = Counter()
+    category_samples: Counter = Counter()
+    problem_counts: Counter = Counter()
+
+    for record in records:
+        report.n_records += 1
+        sample_id = record.get(id_field)
+        parsed = parse_medical_entities(record.get(entities_field))
+        status_counts[parsed.status] += 1
+        for problem in parsed.problems:
+            problem_counts[_problem_kind(problem)] += 1
+        if parsed.status in (STATUS_MISSING, STATUS_MALFORMED, STATUS_UNUSABLE):
+            report.unusable_sample_ids.append(str(sample_id))
+        if not parsed.entities:
+            continue
+
+        report.n_samples_with_entities += 1
+        report.n_entities += len(parsed.entities)
+        sample_has_dosage_drug = False
+        for category in {e.entity_type for e in parsed.entities}:
+            category_samples[category] += 1
+        for entity in parsed.entities:
+            category_entities[entity.entity_type] += 1
+            dosage_like = is_dosage_like(entity.text)
+            if entity.entity_type == DRUG_CATEGORY and dosage_like:
+                report.n_dosage_like_drug_entities += 1
+                sample_has_dosage_drug = True
+            elif dosage_like:
+                report.n_dosage_like_entities_other_categories += 1
+            aligned = offsets_align(entity, record.get(text_field))
+            if aligned is None:
+                continue
+            report.n_entities_with_offsets += 1
+            if aligned:
+                report.n_offsets_aligned += 1
+            else:
+                report.n_offsets_misaligned += 1
+                if len(report.misaligned_examples) < max_examples:
+                    text = record.get(text_field) or ""
+                    report.misaligned_examples.append(
+                        {
+                            "sample_id": sample_id,
+                            "entity_text": entity.text,
+                            "offsets": [list(p) for p in entity.offsets],
+                            "reference_slices": [text[s:e] for s, e in entity.offsets],
+                        }
+                    )
+        if any(e.entity_type == DRUG_CATEGORY for e in parsed.entities):
+            report.n_samples_with_drugs += 1
+        if sample_has_dosage_drug:
+            report.n_samples_with_dosage_like_drug_entity += 1
+
+    report.status_counts = dict(status_counts)
+    report.category_entity_counts = dict(category_entities.most_common())
+    report.category_sample_counts = dict(category_samples.most_common())
+    report.problem_counts = dict(problem_counts)
+    return report
+
+
+def summarize_strata(records: Iterable[Dict[str, Any]], keys: Sequence[str]) -> Dict[str, Any]:
+    """Counts per value of each stratification key, and per key combination,
+    plus duration totals -- input for designing a stratified subset."""
+    per_key: Dict[str, Counter] = {k: Counter() for k in keys}
+    combos: Counter = Counter()
+    combo_duration: Counter = Counter()
+    n = 0
+    total_duration = 0.0
+    for record in records:
+        n += 1
+        values = tuple(str(record.get(k)) for k in keys)
+        for k, v in zip(keys, values):
+            per_key[k][v] += 1
+        combos[values] += 1
+        duration = record.get("duration")
+        if isinstance(duration, (int, float)):
+            total_duration += float(duration)
+            combo_duration[values] += float(duration)
+    return {
+        "n_records": n,
+        "total_duration_seconds": total_duration,
+        "per_key": {k: dict(c.most_common()) for k, c in per_key.items()},
+        "per_combination": [
+            {"values": dict(zip(keys, combo)), "count": count, "duration_seconds": combo_duration[combo]}
+            for combo, count in combos.most_common()
+        ],
+    }
+
+
+def evaluate_sample_entities(
+    sample_id: str,
+    parsed: ParsedAnnotation,
+    hypothesis: Optional[str],
+    config: NormalizationConfig = DEFAULT_NORMALIZATION,
+) -> Dict[str, Any]:
+    """Per-entity match rows for one sample plus summaries.
+
+    Returns unvalidated match labels (exact / normalized / omitted) only.
+    Do not report the summary as recall until the matching rules have been
+    checked against human judgement on real ASR output.
+    """
+    results = match_entities(parsed.entities, hypothesis or "", config)
+    rows = [
+        {
+            "sample_id": sample_id,
+            "entity_id": r.entity.entity_id,
+            "entity_text": r.entity.text,
+            "entity_type": r.entity.entity_type,
+            "dosage_like": is_dosage_like(r.entity.text),
+            "match_status": r.status,
+            "hypothesis": r.hypothesis_raw,
+        }
+        for r in results
+    ]
+    return {
+        "sample_id": sample_id,
+        "annotation_status": parsed.status,
+        "annotation_raw": parsed.raw,
+        "rows": rows,
+        "summary": summarize(results),
+        "summary_by_type": summarize_by_type(results),
+    }
+# ---- end src/clinasr/medical_entities.py ----
 
 # ---- begin src/clinasr/noise.py (sha256:68b1b8316d1cbb82) ----
 """Seeded additive white-noise augmentation at a target SNR.
@@ -1047,7 +1366,398 @@ def run_smoke_test(output_dir: Path, n: int = SMOKE_TEST_N, model_id: str = MODE
     return 0
 # ---- end src/clinasr/smoke_test.py ----
 
-# ---- begin src/clinasr/kaggle_entrypoint.py (sha256:c4a71ffa8c057f6a) ----
+# ---- begin src/clinasr/sampling.py (sha256:8fb04cdb383e4050) ----
+"""Deterministic stratified sample selection for Stage 2.
+
+Selection must come out identical wherever it runs (local Python 3.9, the
+Kaggle image's 3.13), so it uses no RNG at all: within a stratum, records
+are ordered by sha256(f"{seed}:{sample_id}") and the first k are taken.
+That ranking depends only on the seed and the ids, not on stream order,
+Python version, or platform. `selection_fingerprint()` hashes the sorted
+selected ids so a remote run can prove it evaluated exactly the set that
+was reviewed locally.
+
+Allocation: every stratum first gets min(stratum_size, min_per_stratum),
+so small strata are represented; the remainder is distributed in
+proportion to each stratum's remaining capacity (largest-remainder method,
+ties broken by stratum key) so large strata are not over-represented
+relative to the population more than necessary. Selection is fixed BEFORE
+any model is run -- never re-drawn after looking at results.
+"""
+
+
+import hashlib
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
+
+
+StratumKey = Tuple[str, ...]
+
+
+def stable_rank(seed: int, sample_id: str) -> str:
+    return hashlib.sha256(f"{seed}:{sample_id}".encode("utf-8")).hexdigest()
+
+
+def selection_fingerprint(sample_ids: Iterable[str]) -> str:
+    joined = "\n".join(sorted(sample_ids))
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()
+
+
+def allocate(stratum_sizes: Dict[StratumKey, int], total: int, min_per_stratum: int) -> Dict[StratumKey, int]:
+    """Return how many samples to draw from each stratum (sums to `total`)."""
+    population = sum(stratum_sizes.values())
+    if total <= 0:
+        raise ValueError("total must be positive")
+    if total > population:
+        raise ValueError(f"requested {total} samples but only {population} eligible records exist")
+
+    keys = sorted(stratum_sizes, key=lambda k: tuple(str(x) for x in k))
+    base = {k: min(stratum_sizes[k], min_per_stratum) for k in keys}
+    remaining = total - sum(base.values())
+    if remaining < 0:
+        raise ValueError(
+            f"min_per_stratum={min_per_stratum} across {len(keys)} strata needs "
+            f"{sum(base.values())} samples, more than total={total}"
+        )
+
+    capacity = {k: stratum_sizes[k] - base[k] for k in keys}
+    total_capacity = sum(capacity.values())
+    extra = {k: 0 for k in keys}
+    if remaining and total_capacity:
+        quotas = {k: remaining * capacity[k] / total_capacity for k in keys}
+        extra = {k: int(quotas[k]) for k in keys}
+        leftover = remaining - sum(extra.values())
+        by_remainder = sorted(keys, key=lambda k: (-(quotas[k] - extra[k]), tuple(str(x) for x in k)))
+        for k in by_remainder:
+            if leftover == 0:
+                break
+            if extra[k] < capacity[k]:
+                extra[k] += 1
+                leftover -= 1
+    result = {k: base[k] + extra[k] for k in keys}
+    if sum(result.values()) != total:
+        raise AssertionError(f"allocation sums to {sum(result.values())}, expected {total}")
+    return result
+
+
+@dataclass
+class Selection:
+    sample_ids: List[str]
+    seed: int
+    total_requested: int
+    min_per_stratum: int
+    strata_keys: List[str]
+    allocation: Dict[str, int] = field(default_factory=dict)
+    stratum_population: Dict[str, int] = field(default_factory=dict)
+    n_records_seen: int = 0
+    n_eligible: int = 0
+    n_excluded: int = 0
+    exclusion_reasons: Dict[str, int] = field(default_factory=dict)
+    fingerprint: str = ""
+
+
+def _label(key: StratumKey) -> str:
+    return " | ".join(str(x) for x in key)
+
+
+def stratified_select(
+    records: Iterable[Dict[str, Any]],
+    strata_keys: Sequence[str],
+    total: int,
+    seed: int,
+    min_per_stratum: int,
+    id_field: str = "file_name",
+    exclude: Optional[Callable[[Dict[str, Any]], Optional[str]]] = None,
+) -> Selection:
+    """Select `total` record ids, stratified by `strata_keys`.
+
+    `exclude(record)` returns a reason string to drop a record from the
+    eligible pool (e.g. too long for the decoding setup) or None to keep it.
+    Raises ValueError on missing/duplicate ids.
+    """
+    records = list(records)
+    assert_unique_ids([r.get(id_field) for r in records], id_field)
+
+    reasons: Dict[str, int] = {}
+    groups: Dict[StratumKey, List[str]] = {}
+    for record in records:
+        reason = exclude(record) if exclude else None
+        if reason:
+            reasons[reason] = reasons.get(reason, 0) + 1
+            continue
+        key = tuple(str(record.get(k)) for k in strata_keys)
+        groups.setdefault(key, []).append(str(record[id_field]))
+
+    sizes = {k: len(v) for k, v in groups.items()}
+    allocation = allocate(sizes, total, min_per_stratum)
+
+    selected: List[str] = []
+    for key, k in allocation.items():
+        ranked = sorted(groups[key], key=lambda sid: stable_rank(seed, sid))
+        selected.extend(ranked[:k])
+    selected.sort()
+
+    return Selection(
+        sample_ids=selected,
+        seed=seed,
+        total_requested=total,
+        min_per_stratum=min_per_stratum,
+        strata_keys=list(strata_keys),
+        allocation={_label(k): v for k, v in allocation.items()},
+        stratum_population={_label(k): sizes[k] for k in allocation},
+        n_records_seen=len(records),
+        n_eligible=sum(sizes.values()),
+        n_excluded=sum(reasons.values()),
+        exclusion_reasons=reasons,
+        fingerprint=selection_fingerprint(selected),
+    )
+# ---- end src/clinasr/sampling.py ----
+
+# ---- begin src/clinasr/stage2.py (sha256:2433490281f195fd) ----
+"""Stage 2: Whisper-tiny.en vs Whisper-base.en on one fixed stratified subset.
+
+Design (docs/WORKLOG.md has the rationale and the real population counts):
+- Dataset pinned to a Hub revision; models pinned to Hub revisions.
+- Strata: recording_context x type_concept. 300 samples, at least 20 per
+  stratum, seed STAGE2_SEED, hash-ranked selection (clinasr.sampling).
+- The selection is recomputed on Kaggle from streamed metadata and must
+  match STAGE2_EXPECTED_FINGERPRINT (computed locally by
+  scripts/select_stage2_samples.py and reviewed before any GPU run). A
+  mismatch aborts the run before inference.
+- Both models decode the identical audio with identical greedy settings.
+- Entity matching is written out per entity but labelled unvalidated.
+"""
+
+
+import csv
+import dataclasses
+import json
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence
+
+
+DATASET_ID = "ekacare/eka-medical-asr-evaluation-dataset"
+DATASET_CONFIG = "en"
+DATASET_SPLIT = "test"
+DATASET_REVISION = "433e66037c8aebb8f396b938624a5ab6afc4ca36"
+MODELS = {
+    "openai/whisper-tiny.en": "87c7102498dcde7456f24cfd30239ca606ed9063",
+    "openai/whisper-base.en": "911407f4214e0e1d82085af863093ec0b66f9cd6",
+}
+STRATA_KEYS = ["recording_context", "type_concept"]
+STAGE2_TOTAL = 300
+STAGE2_MIN_PER_STRATUM = 20
+STAGE2_SEED = 20261029
+# Set from the local, reviewed selection (scripts/select_stage2_samples.py).
+STAGE2_EXPECTED_FINGERPRINT = "8b345d92bc204dedebe465065dac1993ac1e48c6cd55f408a12e47117d84a6c3"
+BATCH_SIZE = 16
+GENERATE_KWARGS = {"num_beams": 1, "do_sample": False}
+
+
+def select(records: Sequence[Dict[str, Any]]) -> Selection:
+    return stratified_select(
+        records,
+        STRATA_KEYS,
+        total=STAGE2_TOTAL,
+        seed=STAGE2_SEED,
+        min_per_stratum=STAGE2_MIN_PER_STRATUM,
+    )
+
+
+def _stream(decode_audio: bool):
+    import datasets
+
+    stream = datasets.load_dataset(
+        DATASET_ID, DATASET_CONFIG, split=DATASET_SPLIT, streaming=True, revision=DATASET_REVISION
+    )
+    if not decode_audio:
+        stream = stream.cast_column("audio", datasets.Audio(decode=False)).remove_columns(["audio"])
+    return stream
+
+
+def load_metadata() -> List[Dict[str, Any]]:
+    return [dict(r) for r in _stream(decode_audio=False)]
+
+
+def load_selected_audio(sample_ids: Sequence[str]) -> List[Dict[str, Any]]:
+    wanted = set(sample_ids)
+    found: Dict[str, Dict[str, Any]] = {}
+    for record in _stream(decode_audio=True):
+        if record["file_name"] in wanted:
+            found[record["file_name"]] = dict(record)
+            if len(found) == len(wanted):
+                break
+    missing = wanted - set(found)
+    if missing:
+        raise RuntimeError(f"{len(missing)} selected samples not found in the stream: {sorted(missing)[:5]}")
+    return [found[sid] for sid in sorted(found)]
+
+
+def transcribe(records: Sequence[Dict[str, Any]], model_id: str, revision: str) -> Dict[str, Any]:
+    import torch
+    from transformers import pipeline
+
+    use_cuda = torch.cuda.is_available()
+    asr = pipeline(
+        "automatic-speech-recognition",
+        model=model_id,
+        revision=revision,
+        device=0 if use_cuda else -1,
+        dtype=torch.float16 if use_cuda else torch.float32,
+    )
+    inputs = [{"array": r["audio"]["array"], "sampling_rate": r["audio"]["sampling_rate"]} for r in records]
+    start = time.perf_counter()
+    outputs = asr(inputs, batch_size=BATCH_SIZE, generate_kwargs=dict(GENERATE_KWARGS))
+    elapsed = time.perf_counter() - start
+    return {
+        "hypotheses": [o["text"] for o in outputs],
+        "seconds": elapsed,
+        "device": "cuda" if use_cuda else "cpu",
+        "dtype": "float16" if use_cuda else "float32",
+    }
+
+
+def prediction_rows(records: Sequence[Dict[str, Any]], hypotheses: Sequence[str], model_id: str) -> List[Dict[str, Any]]:
+    if len(records) != len(hypotheses):
+        raise ValueError("records and hypotheses must be the same length")
+    return [
+        {
+            "sample_id": r["file_name"],
+            "model": model_id,
+            "condition": "clean",
+            "recording_context": r.get("recording_context"),
+            "type_concept": r.get("type_concept"),
+            "session_id": r.get("session_id"),
+            "duration": r.get("duration"),
+            "reference": r.get("text"),
+            "hypothesis": h,
+        }
+        for r, h in zip(records, hypotheses)
+    ]
+
+
+def summary_rows(rows: Sequence[Dict[str, Any]], model_id: str) -> List[Dict[str, Any]]:
+    """Corpus WER/CER overall and per stratum for one model's rows."""
+    groups: Dict[str, List[Dict[str, Any]]] = {"ALL": list(rows)}
+    for row in rows:
+        groups.setdefault(f"{row['recording_context']} | {row['type_concept']}", []).append(row)
+    out = []
+    for stratum, group in groups.items():
+        metrics = compute_metrics([g["sample_id"] for g in group], [g["reference"] for g in group], [g["hypothesis"] for g in group])
+        corpus = compute_corpus_metric(metrics)
+        out.append(
+            {
+                "model": model_id,
+                "condition": "clean",
+                "stratum": stratum,
+                "n_samples": corpus.n_samples_total,
+                "n_valid": corpus.n_samples_valid,
+                "wer": corpus.wer,
+                "cer": corpus.cer,
+            }
+        )
+    return out
+
+
+def entity_rows(records: Sequence[Dict[str, Any]], hypotheses: Sequence[str], model_id: str) -> List[Dict[str, Any]]:
+    rows = []
+    for record, hypothesis in zip(records, hypotheses):
+        parsed = parse_medical_entities(record.get("medical_entities"))
+        result = evaluate_sample_entities(record["file_name"], parsed, hypothesis)
+        for row in result["rows"]:
+            row = dict(row)
+            row.pop("hypothesis", None)  # already in predictions.csv
+            row["model"] = model_id
+            row["annotation_status"] = parsed.status
+            row["matching_validated"] = False
+            rows.append(row)
+    return rows
+
+
+def _write_csv(path: Path, rows: Sequence[Dict[str, Any]]) -> None:
+    if not rows:
+        path.write_text("", encoding="utf-8")
+        return
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def run_stage2(output_dir: Path, expected_fingerprint: Optional[str] = None) -> int:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    expected = expected_fingerprint or STAGE2_EXPECTED_FINGERPRINT
+
+    bootstrap = bootstrap_all()
+    print(f"bootstrap: {bootstrap}")
+    if not all(bootstrap.values()):
+        print("ERROR: package bootstrap failed; aborting before inference.")
+        return 1
+
+    handle = new_run(output_dir / "run", git_commit=get_git_commit())
+    logger = handle.get_logger()
+
+    metadata = load_metadata()
+    selection = select(metadata)
+    (output_dir / "selection.json").write_text(json.dumps(dataclasses.asdict(selection), indent=2), encoding="utf-8")
+    print(f"selected {len(selection.sample_ids)} samples, fingerprint {selection.fingerprint}")
+    if selection.fingerprint != expected:
+        print(f"ERROR: selection fingerprint {selection.fingerprint} != expected {expected}; aborting before inference.")
+        return 2
+
+    records = load_selected_audio(selection.sample_ids)
+    all_predictions, all_summaries, all_entities, timings = [], [], [], {}
+    for model_id, revision in MODELS.items():
+        print(f"transcribing with {model_id}@{revision[:10]} ...")
+        result = transcribe(records, model_id, revision)
+        timings[model_id] = {k: result[k] for k in ("seconds", "device", "dtype")}
+        preds = prediction_rows(records, result["hypotheses"], model_id)
+        all_predictions.extend(preds)
+        all_summaries.extend(summary_rows(preds, model_id))
+        all_entities.extend(entity_rows(records, result["hypotheses"], model_id))
+        logger.info("%s done in %.1fs on %s", model_id, result["seconds"], result["device"])
+
+    _write_csv(output_dir / "predictions.csv", all_predictions)
+    _write_csv(output_dir / "summary_metrics.csv", all_summaries)
+    _write_csv(output_dir / "entity_matches_unvalidated.csv", all_entities)
+
+    config = ExperimentConfig(
+        dataset_id=DATASET_ID,
+        dataset_config=DATASET_CONFIG,
+        dataset_split=DATASET_SPLIT,
+        seed=STAGE2_SEED,
+        sample_selection=SampleSelection(
+            method="stratified_hash_ranked",
+            size=len(selection.sample_ids),
+            stratify_by=list(STRATA_KEYS),
+            sample_ids=list(selection.sample_ids),
+        ),
+        models=[ModelSpec(model_id=m, resolved_revision=r) for m, r in MODELS.items()],
+        normalization=DEFAULT_NORMALIZATION,
+        noise=NoiseConfig(snrs_db=[None]),
+        software_versions=resolve_installed_versions(["jiwer", "numpy", "torch", "transformers", "datasets", "torchcodec"]),
+        dataset_revision=DATASET_REVISION,
+    )
+    (output_dir / "experiment_config.json").write_text(config.to_json(), encoding="utf-8")
+    handle.write_manifest(
+        {
+            "stage": 2,
+            "git_commit": get_git_commit(),
+            "selection_fingerprint": selection.fingerprint,
+            "timings": timings,
+            "generate_kwargs": GENERATE_KWARGS,
+            "batch_size": BATCH_SIZE,
+        }
+    )
+    for row in all_summaries:
+        if row["stratum"] == "ALL":
+            print(f"{row['model']}: WER={row['wer']:.4f} CER={row['cer']:.4f} (n={row['n_valid']})")
+    return 0
+# ---- end src/clinasr/stage2.py ----
+
+# ---- begin src/clinasr/kaggle_entrypoint.py (sha256:7af0cf0f74b42348) ----
 """Entry point bundled into kaggle/run_clinasr.py by scripts/build_kaggle_script.py.
 
 `--self-test` (no GPU, no dataset, no model): proves the packaging pipeline
@@ -1070,6 +1780,10 @@ import platform
 import sys
 from pathlib import Path
 
+
+# Kaggle runs the script with no arguments, so the stage it executes is
+# fixed here at build time. 2 = tiny.en vs base.en on the stratified subset.
+DEFAULT_STAGE = 2
 
 
 def _report_environment() -> dict:
@@ -1138,6 +1852,7 @@ def main(argv=None) -> int:
         action="store_true",
         help="Run packaging self-checks only; no dataset access, no model inference.",
     )
+    parser.add_argument("--stage", type=int, choices=[1, 2], default=DEFAULT_STAGE, help="1 = smoke test, 2 = two-model stratified run.")
     parser.add_argument(
         "--n",
         type=int,
@@ -1164,6 +1879,8 @@ def main(argv=None) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "environment.json").write_text(json.dumps(env_report, indent=2), encoding="utf-8")
 
+    if args.stage == 2:
+        return run_stage2(output_dir)
     return run_smoke_test(output_dir, n=args.n, model_id=args.model_id)
 
 

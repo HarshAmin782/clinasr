@@ -1,12 +1,14 @@
 """Medical-entity preservation matching.
 
-This module is schema-agnostic on purpose: PROJECT_SPEC.md and
-prompts/03-medical-entities.md both require inspecting the real
-`medical_entities` annotation structure on the EkaCare dataset BEFORE
-writing dataset-specific metrics. That inspection (schema_audit.py, run
-against the live dataset) has not happened yet in this repository, so this
-module only provides the generic matching engine. Phase 3 adapts the real
-annotation records into `EntitySpan` objects and wires this engine in.
+This module is the schema-agnostic matching engine. Parsing the real
+EkaCare `medical_entities` annotation format into `EntitySpan` objects lives
+in clinasr.medical_entities, which depends on this module (not the other
+way round).
+
+VALIDATION STATUS: these matching rules have NOT been validated against
+human judgement on real ASR output yet. Summary numbers from `summarize()`
+are therefore reported as an unvalidated "match_rate", never as entity
+recall/precision, and carry `"validated": False`.
 
 Matching policy (avoids the "optimistic substring match" failure mode
 explicitly called out in prompts/03-medical-entities.md, e.g. the digits
@@ -23,18 +25,16 @@ explicitly called out in prompts/03-medical-entities.md, e.g. the digits
 Raw hypothesis text is always preserved on the result so downstream review
 can distinguish "matched" from "a human should double check this."
 
-Substitution and false-positive detection (an entity-shaped token appearing
-in the hypothesis that does not correspond to any reference entity) require
-knowing which hypothesis tokens are "entity-shaped" for the real dataset,
-which depends on the annotation schema this module deliberately does not
-assume. That detection is Phase 3 work once schema_audit.py has run against
-the live dataset; see docs/ISSUES.md.
+Substitution and false-positive detection are NOT implemented: deciding
+that a hypothesis token sequence is a *wrong* entity (rather than ordinary
+non-entity speech) needs a validated entity recognizer or lexicon for the
+hypothesis side, which this project does not have yet. See docs/ISSUES.md.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 from clinasr.normalization import DEFAULT_NORMALIZATION, NormalizationConfig, normalize_text
 
@@ -44,12 +44,16 @@ class EntitySpan:
     text: str
     entity_type: Optional[str] = None
     entity_id: Optional[str] = None
+    # Character offsets into the reference transcript, as (start, end)
+    # pairs, end-exclusive. A tuple of pairs because the real annotation
+    # format allows several spans per entity.
+    offsets: Optional[Tuple[Tuple[int, int], ...]] = None
 
 
 @dataclass(frozen=True)
 class EntityMatchResult:
     entity: EntitySpan
-    status: str  # "exact" | "normalized" | "omitted" | "false_positive_only"
+    status: str  # "exact" | "normalized" | "omitted"
     hypothesis_raw: str
 
 
@@ -105,11 +109,20 @@ def summarize(results: Sequence[EntityMatchResult]) -> dict:
     counts = {"exact": 0, "normalized": 0, "omitted": 0}
     for r in results:
         counts[r.status] = counts.get(r.status, 0) + 1
-    recall = (counts["exact"] + counts["normalized"]) / total if total else None
+    match_rate = (counts["exact"] + counts["normalized"]) / total if total else None
     return {
         "n_entities": total,
         "n_exact": counts["exact"],
         "n_normalized": counts["normalized"],
         "n_omitted": counts["omitted"],
-        "recall": recall,
+        "match_rate": match_rate,
+        "validated": False,
     }
+
+
+def summarize_by_type(results: Sequence[EntityMatchResult]) -> dict:
+    """`summarize()` broken down by `entity.entity_type`."""
+    groups: dict = {}
+    for r in results:
+        groups.setdefault(r.entity.entity_type, []).append(r)
+    return {entity_type: summarize(group) for entity_type, group in sorted(groups.items(), key=lambda kv: str(kv[0]))}

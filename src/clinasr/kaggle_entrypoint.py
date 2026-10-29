@@ -25,6 +25,11 @@ from clinasr.config import ExperimentConfig, ModelSpec, NoiseConfig, SampleSelec
 from clinasr.normalization import NormalizationConfig
 from clinasr.schema_audit import audit_records
 from clinasr.smoke_test import MODEL_ID, SMOKE_TEST_N, run_smoke_test
+from clinasr.stage2 import run_stage2
+
+# Kaggle runs the script with no arguments, so the stage it executes is
+# fixed here at build time. 2 = tiny.en vs base.en on the stratified subset.
+DEFAULT_STAGE = 2
 
 
 def _report_environment() -> dict:
@@ -93,6 +98,7 @@ def main(argv=None) -> int:
         action="store_true",
         help="Run packaging self-checks only; no dataset access, no model inference.",
     )
+    parser.add_argument("--stage", type=int, choices=[1, 2], default=DEFAULT_STAGE, help="1 = smoke test, 2 = two-model stratified run.")
     parser.add_argument(
         "--n",
         type=int,
@@ -119,6 +125,8 @@ def main(argv=None) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "environment.json").write_text(json.dumps(env_report, indent=2), encoding="utf-8")
 
+    if args.stage == 2:
+        return run_stage2(output_dir)
     return run_smoke_test(output_dir, n=args.n, model_id=args.model_id)
 
 

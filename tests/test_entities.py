@@ -44,10 +44,24 @@ def test_summarize_counts_and_recall():
     assert summary["n_entities"] == 2
     assert summary["n_exact"] == 1
     assert summary["n_omitted"] == 1
-    assert summary["recall"] == 0.5
+    assert summary["match_rate"] == 0.5
+    assert summary["validated"] is False
+    assert "recall" not in summary
 
 
-def test_summarize_empty_entity_list_has_no_recall():
+def test_summarize_empty_entity_list_has_no_match_rate():
     summary = summarize([])
     assert summary["n_entities"] == 0
-    assert summary["recall"] is None
+    assert summary["match_rate"] is None
+
+
+def test_summarize_by_type_groups_results():
+    from clinasr.entities import summarize_by_type
+
+    results = match_entities(
+        [EntitySpan(text="metformin", entity_type="drugs"), EntitySpan(text="fever", entity_type="clinical_findings")],
+        "take metformin daily",
+    )
+    by_type = summarize_by_type(results)
+    assert by_type["drugs"]["n_exact"] == 1
+    assert by_type["clinical_findings"]["n_omitted"] == 1
