@@ -1,7 +1,7 @@
 """GENERATED FILE -- DO NOT EDIT DIRECTLY.
 
 Built by scripts/build_kaggle_script.py from src/clinasr/*.py.
-Source commit: b640773271ca
+Source commit: 6643cf2836d7
 To change behavior, edit the source modules under src/clinasr/ and
 rebuild. This file is what Kaggle CLI uploads as the single code_file.
 """
@@ -89,7 +89,7 @@ def normalize_text(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATIO
     return text
 # ---- end src/clinasr/normalization.py ----
 
-# ---- begin src/clinasr/metrics.py (sha256:086d98d06cd01d2e) ----
+# ---- begin src/clinasr/metrics.py (sha256:19c6e8ace505e2df) ----
 """WER/CER computation shared by local tests and the bundled Kaggle script.
 
 Metric denominator policy (PROJECT_SPEC.md "Measurements"):
@@ -106,13 +106,17 @@ Metric denominator policy (PROJECT_SPEC.md "Measurements"):
   reference as an empty hypothesis (all reference words/chars counted as
   deletions), not dropped, so model failures are not hidden from the corpus
   metric.
+
+`jiwer` is imported lazily inside the functions that need it, not at module
+level. The bundled kaggle/run_clinasr.py concatenates every src/clinasr
+module into one file, so a top-level `import jiwer` would make even
+`--self-test` (which never computes a metric) fail at script load on a bare
+Kaggle image that hasn't installed jiwer yet. See docs/ISSUES.md #3.
 """
 
 
 from dataclasses import dataclass
 from typing import List, Optional, Sequence
-
-import jiwer
 
 
 
@@ -160,6 +164,8 @@ def compute_sample_metric(
             reason_invalid="empty_reference",
         )
 
+    import jiwer
+
     word_out = jiwer.process_words([ref_norm], [hyp_norm])
     char_out = jiwer.process_characters([ref_norm], [hyp_norm])
     return SampleMetric(
@@ -183,6 +189,8 @@ def compute_corpus_metric(samples: Sequence[SampleMetric]) -> CorpusMetric:
             wer=None,
             cer=None,
         )
+
+    import jiwer
 
     refs = [s.reference_norm for s in valid]
     hyps = [s.hypothesis_norm for s in valid]
@@ -634,7 +642,7 @@ def new_run(results_root: Path, git_commit: Optional[str] = None) -> RunHandle:
     )
 # ---- end src/clinasr/run_manifest.py ----
 
-# ---- begin src/clinasr/schema_audit.py (sha256:d9d89cdf7ebe46b2) ----
+# ---- begin src/clinasr/schema_audit.py (sha256:6ccd053b8abb2161) ----
 """Dataset schema auditing, run BEFORE any stratified sampling.
 
 PROJECT_SPEC.md lists `audio`, `text`, `session_id`, `speaker`,
@@ -726,17 +734,31 @@ def audit_hf_dataset(
     config_name: str,
     split: str,
     n: int = 5,
+    decode_audio: bool = False,
 ) -> SchemaAuditReport:
     """Stream the first `n` records of a Hugging Face dataset and audit them.
 
     Requires network access and the `datasets` package; neither is assumed
     to be available when this module is merely imported for unit testing.
-    Not called automatically anywhere in this repository yet — Phase 1 runs
-    it explicitly as a documented, opt-in step.
+
+    `decode_audio=False` (the default) casts any `datasets.Audio` column to
+    `decode=False` before iterating, so the field comes back as a raw
+    `{"bytes": ..., "path": ...}` dict instead of being decoded into a
+    waveform array. A schema audit only needs field names/types/presence, not
+    decoded audio, and as of `datasets` 4.x decoding requires the optional
+    `torchcodec` package to be installed -- forcing that dependency onto a
+    plain schema-inspection call would be disproportionate. Pass
+    `decode_audio=True` once a real decode is actually needed and torchcodec
+    (or an equivalent backend) is available.
     """
     import datasets  # local import: optional, heavy dependency
 
     stream = datasets.load_dataset(dataset_id, config_name, split=split, streaming=True)
+    if not decode_audio:
+        for column_name, feature in stream.features.items():
+            if isinstance(feature, datasets.Audio):
+                stream = stream.cast_column(column_name, datasets.Audio(decode=False))
+
     records = []
     for i, record in enumerate(stream):
         if i >= n:

@@ -9,6 +9,19 @@ pytest>=8.4.2
 jiwer>=4.0.0
 numpy>=2.0.2
 
+# Needed only for scripts/audit_dataset_schema.py (streams dataset metadata,
+# no GPU). Versions verified installable/working on this machine's Python
+# 3.9.1 on 2026-10-29.
+datasets>=4.5.0
+soundfile>=0.13.1
+
+# aiohttp is a transitive dependency of `datasets`. Pinned explicitly because
+# the latest aiohttp (3.13.x as of this writing) triggers a Python 3.9
+# `typing` module bug ("TypeError: unhashable type: 'list'") on import, which
+# otherwise breaks `datasets` entirely on this interpreter. 3.9.5 is verified
+# working. See docs/ISSUES.md #1.
+aiohttp==3.9.5
+
 # Kaggle CLI is NOT installed on this machine as of 2026-10-29, so no floor
 # version is asserted here (would be an invented number). Install with
 # `pip install --upgrade kaggle` per README.md and record the resolved

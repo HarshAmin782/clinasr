@@ -14,14 +14,18 @@ Metric denominator policy (PROJECT_SPEC.md "Measurements"):
   reference as an empty hypothesis (all reference words/chars counted as
   deletions), not dropped, so model failures are not hidden from the corpus
   metric.
+
+`jiwer` is imported lazily inside the functions that need it, not at module
+level. The bundled kaggle/run_clinasr.py concatenates every src/clinasr
+module into one file, so a top-level `import jiwer` would make even
+`--self-test` (which never computes a metric) fail at script load on a bare
+Kaggle image that hasn't installed jiwer yet. See docs/ISSUES.md #3.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Optional, Sequence
-
-import jiwer
 
 from clinasr.normalization import DEFAULT_NORMALIZATION, NormalizationConfig, normalize_text
 
@@ -70,6 +74,8 @@ def compute_sample_metric(
             reason_invalid="empty_reference",
         )
 
+    import jiwer
+
     word_out = jiwer.process_words([ref_norm], [hyp_norm])
     char_out = jiwer.process_characters([ref_norm], [hyp_norm])
     return SampleMetric(
@@ -93,6 +99,8 @@ def compute_corpus_metric(samples: Sequence[SampleMetric]) -> CorpusMetric:
             wer=None,
             cer=None,
         )
+
+    import jiwer
 
     refs = [s.reference_norm for s in valid]
     hyps = [s.hypothesis_norm for s in valid]

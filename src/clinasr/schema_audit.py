@@ -90,17 +90,31 @@ def audit_hf_dataset(
     config_name: str,
     split: str,
     n: int = 5,
+    decode_audio: bool = False,
 ) -> SchemaAuditReport:
     """Stream the first `n` records of a Hugging Face dataset and audit them.
 
     Requires network access and the `datasets` package; neither is assumed
     to be available when this module is merely imported for unit testing.
-    Not called automatically anywhere in this repository yet — Phase 1 runs
-    it explicitly as a documented, opt-in step.
+
+    `decode_audio=False` (the default) casts any `datasets.Audio` column to
+    `decode=False` before iterating, so the field comes back as a raw
+    `{"bytes": ..., "path": ...}` dict instead of being decoded into a
+    waveform array. A schema audit only needs field names/types/presence, not
+    decoded audio, and as of `datasets` 4.x decoding requires the optional
+    `torchcodec` package to be installed -- forcing that dependency onto a
+    plain schema-inspection call would be disproportionate. Pass
+    `decode_audio=True` once a real decode is actually needed and torchcodec
+    (or an equivalent backend) is available.
     """
     import datasets  # local import: optional, heavy dependency
 
     stream = datasets.load_dataset(dataset_id, config_name, split=split, streaming=True)
+    if not decode_audio:
+        for column_name, feature in stream.features.items():
+            if isinstance(feature, datasets.Audio):
+                stream = stream.cast_column(column_name, datasets.Audio(decode=False))
+
     records = []
     for i, record in enumerate(stream):
         if i >= n:

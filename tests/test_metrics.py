@@ -51,3 +51,27 @@ def test_compute_metrics_requires_equal_length_inputs():
 
     with pytest.raises(ValueError):
         compute_metrics(["s1"], ["a", "b"], ["a"])
+
+
+def test_module_imports_without_jiwer_installed(monkeypatch):
+    """Importing clinasr.metrics must not require jiwer (docs/ISSUES.md #3):
+    a bare Kaggle image without jiwer preinstalled would otherwise crash on
+    script load, before --self-test even runs."""
+    import builtins
+    import importlib
+    import sys
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "jiwer":
+            raise ImportError("simulated: jiwer not installed")
+        return real_import(name, *args, **kwargs)
+
+    sys.modules.pop("jiwer", None)
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    import clinasr.metrics as metrics_module
+
+    importlib.reload(metrics_module)  # must not raise ImportError
+
