@@ -219,3 +219,19 @@ def test_evaluate_sample_entities_handles_missing_hypothesis():
     parsed = parse_medical_entities(REAL_SHAPE)
     result = evaluate_sample_entities("/a/1.m4a", parsed, None)
     assert all(row["match_status"] == "omitted" for row in result["rows"])
+
+
+def test_dose_expressions_and_preservation():
+    from clinasr.medical_entities import dose_expressions, dose_preserved
+
+    assert dose_expressions("Nervsenz 75mg/10mg Tablet") == ["75 mg", "10 mg"]
+    assert dose_expressions("Dolo 650") == []
+    # Brand misheard but dose kept -> dose preserved.
+    assert dose_preserved("Voage 5mg Tablet", "Vogue 5mg tablet is used") is True
+    # Wrong number -> not preserved.
+    assert dose_preserved("Texifen 250mg Tablet", "Textifen 25 mg tablet") is False
+    # One of two doses missing -> not preserved.
+    assert dose_preserved("Cefrax 200mg/125mg", "Cefrax 200 MG tablet") is False
+    # Spoken unit form is not reconciled (strict, documented).
+    assert dose_preserved("12.9 g/dL", "12.9 grams per deciliter") is False
+    assert dose_preserved("Dolo 650", "anything") is None

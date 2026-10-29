@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from clinasr.entities import EntitySpan, match_entities, summarize, summarize_by_type
-from clinasr.normalization import DEFAULT_NORMALIZATION, NormalizationConfig
+from clinasr.normalization import DEFAULT_NORMALIZATION, NormalizationConfig, normalize_text
 
 STATUS_OK = "ok"
 STATUS_EMPTY = "empty"
@@ -46,6 +46,9 @@ _DOSAGE_PATTERN = re.compile(
     r"\b\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|gm|ml|iu|units?|%)(?![a-z])",
     re.IGNORECASE,
 )
+
+# Captures number + unit on already-normalized text (v2 splits "400mg" -> "400 mg").
+_DOSE_CAPTURE = re.compile(r"\b(\d+(?:\.\d+)?) (mg|mcg|µg|gm|g|ml|iu|units?)(?![a-z])")
 
 
 @dataclass(frozen=True)
@@ -304,3 +307,28 @@ def evaluate_sample_entities(
         "summary": summarize(results),
         "summary_by_type": summarize_by_type(results),
     }
+
+
+def dose_expressions(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATION) -> List[str]:
+    """Normalized number+unit strings inside `text`, e.g.
+    "Nervsenz 75mg/10mg Tablet" -> ["75 mg", "10 mg"]."""
+    return [f"{m.group(1)} {m.group(2).lower()}" for m in _DOSE_CAPTURE.finditer(normalize_text(text, config))]
+
+
+def dose_preserved(entity_text: str, hypothesis: Optional[str], config: NormalizationConfig = DEFAULT_NORMALIZATION) -> Optional[bool]:
+    """True if every dose expression in the entity appears as a token
+    sequence in the normalized hypothesis; None if the entity has no dose.
+
+    Separates "was the dose kept" from "was the brand name kept". Strict:
+    spoken forms ("five hundred", "grams per deciliter") count as not
+    preserved. Unvalidated like all entity matching here.
+    """
+    doses = dose_expressions(entity_text, config)
+    if not doses:
+        return None
+    hyp_tokens = normalize_text(hypothesis or "", config).split()
+    for dose in doses:
+        needle = dose.split()
+        if not any(hyp_tokens[i : i + len(needle)] == needle for i in range(len(hyp_tokens) - len(needle) + 1)):
+            return False
+    return True

@@ -129,19 +129,20 @@ def prediction_rows(records: Sequence[Dict[str, Any]], hypotheses: Sequence[str]
     ]
 
 
-def summary_rows(rows: Sequence[Dict[str, Any]], model_id: str) -> List[Dict[str, Any]]:
+def summary_rows(rows: Sequence[Dict[str, Any]], model_id: str, config=DEFAULT_NORMALIZATION) -> List[Dict[str, Any]]:
     """Corpus WER/CER overall and per stratum for one model's rows."""
     groups: Dict[str, List[Dict[str, Any]]] = {"ALL": list(rows)}
     for row in rows:
         groups.setdefault(f"{row['recording_context']} | {row['type_concept']}", []).append(row)
     out = []
     for stratum, group in groups.items():
-        metrics = compute_metrics([g["sample_id"] for g in group], [g["reference"] for g in group], [g["hypothesis"] for g in group])
+        metrics = compute_metrics([g["sample_id"] for g in group], [g["reference"] for g in group], [g["hypothesis"] for g in group], config)
         corpus = compute_corpus_metric(metrics)
         out.append(
             {
                 "model": model_id,
                 "condition": "clean",
+                "normalization": config.version,
                 "stratum": stratum,
                 "n_samples": corpus.n_samples_total,
                 "n_valid": corpus.n_samples_valid,

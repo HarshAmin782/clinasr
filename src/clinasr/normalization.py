@@ -25,6 +25,10 @@ from dataclasses import dataclass
 # Punctuation characters considered strippable.
 _PUNCT_CHARS = set("""!"#$%&'()*+,./:;<=>?@[]^_`{|}~""")
 _WHITESPACE_PATTERN = re.compile(r"\s+")
+# v2 rule (declared 2026-10-29 after Stage 2 showed "400mg" vs "400 mg"
+# counted as a word error): put a space between a number and a directly
+# attached dose unit. Applied identically to reference and hypothesis.
+_NUMBER_UNIT_PATTERN = re.compile(r"(\d)(mg|mcg|gm|g|ml|iu|units?)(?![a-z])")
 
 
 def _strip_punctuation(text: str, preserve_inter_digit: bool) -> str:
@@ -54,9 +58,14 @@ class NormalizationConfig:
     preserve_inter_digit_punctuation: bool = True
     collapse_whitespace: bool = True
     unicode_normalize_form: str = "NFKC"
+    split_number_unit: bool = True
+    version: str = "v2"
 
 
 DEFAULT_NORMALIZATION = NormalizationConfig()
+# The policy Stage 2 (run 20261029T162830Z) was scored with, kept so those
+# numbers stay reproducible.
+NORMALIZATION_V1 = NormalizationConfig(split_number_unit=False, version="v1")
 
 
 def normalize_text(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATION) -> str:
@@ -74,6 +83,8 @@ def normalize_text(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATIO
         text = text.lower()
     if config.strip_punctuation:
         text = _strip_punctuation(text, config.preserve_inter_digit_punctuation)
+    if config.split_number_unit:
+        text = _NUMBER_UNIT_PATTERN.sub(r"\1 \2", text)
     if config.collapse_whitespace:
         text = _WHITESPACE_PATTERN.sub(" ", text).strip()
     return text

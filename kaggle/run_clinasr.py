@@ -1,14 +1,14 @@
 """GENERATED FILE -- DO NOT EDIT DIRECTLY.
 
 Built by scripts/build_kaggle_script.py from src/clinasr/*.py.
-Source commit: f96c5f60bc95
+Source commit: 56a08b2edba8
 To change behavior, edit the source modules under src/clinasr/ and
 rebuild. This file is what Kaggle CLI uploads as the single code_file.
 """
 
 from __future__ import annotations
 
-# ---- begin src/clinasr/normalization.py (sha256:bf05bbf060efe009) ----
+# ---- begin src/clinasr/normalization.py (sha256:f50f60c2664ed7d3) ----
 """Text normalization for WER/CER scoring.
 
 Policy (documented per PROJECT_SPEC.md "Measurements" section):
@@ -35,6 +35,10 @@ from dataclasses import dataclass
 # Punctuation characters considered strippable.
 _PUNCT_CHARS = set("""!"#$%&'()*+,./:;<=>?@[]^_`{|}~""")
 _WHITESPACE_PATTERN = re.compile(r"\s+")
+# v2 rule (declared 2026-10-29 after Stage 2 showed "400mg" vs "400 mg"
+# counted as a word error): put a space between a number and a directly
+# attached dose unit. Applied identically to reference and hypothesis.
+_NUMBER_UNIT_PATTERN = re.compile(r"(\d)(mg|mcg|gm|g|ml|iu|units?)(?![a-z])")
 
 
 def _strip_punctuation(text: str, preserve_inter_digit: bool) -> str:
@@ -64,9 +68,14 @@ class NormalizationConfig:
     preserve_inter_digit_punctuation: bool = True
     collapse_whitespace: bool = True
     unicode_normalize_form: str = "NFKC"
+    split_number_unit: bool = True
+    version: str = "v2"
 
 
 DEFAULT_NORMALIZATION = NormalizationConfig()
+# The policy Stage 2 (run 20261029T162830Z) was scored with, kept so those
+# numbers stay reproducible.
+NORMALIZATION_V1 = NormalizationConfig(split_number_unit=False, version="v1")
 
 
 def normalize_text(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATION) -> str:
@@ -84,6 +93,8 @@ def normalize_text(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATIO
         text = text.lower()
     if config.strip_punctuation:
         text = _strip_punctuation(text, config.preserve_inter_digit_punctuation)
+    if config.split_number_unit:
+        text = _NUMBER_UNIT_PATTERN.sub(r"\1 \2", text)
     if config.collapse_whitespace:
         text = _WHITESPACE_PATTERN.sub(" ", text).strip()
     return text
@@ -348,7 +359,7 @@ def summarize_by_type(results: Sequence[EntityMatchResult]) -> dict:
     return {entity_type: summarize(group) for entity_type, group in sorted(groups.items(), key=lambda kv: str(kv[0]))}
 # ---- end src/clinasr/entities.py ----
 
-# ---- begin src/clinasr/medical_entities.py (sha256:605f316b3447ccce) ----
+# ---- begin src/clinasr/medical_entities.py (sha256:eb09da71c55bb837) ----
 """Adapter for the EkaCare dataset's real `medical_entities` annotations.
 
 Observed format (real records, 2026-10-29; see docs/WORKLOG.md): the field
@@ -394,6 +405,9 @@ _DOSAGE_PATTERN = re.compile(
     r"\b\d+(?:\.\d+)?\s*(?:mg|mcg|µg|g|gm|ml|iu|units?|%)(?![a-z])",
     re.IGNORECASE,
 )
+
+# Captures number + unit on already-normalized text (v2 splits "400mg" -> "400 mg").
+_DOSE_CAPTURE = re.compile(r"\b(\d+(?:\.\d+)?) (mg|mcg|µg|gm|g|ml|iu|units?)(?![a-z])")
 
 
 @dataclass(frozen=True)
@@ -652,6 +666,31 @@ def evaluate_sample_entities(
         "summary": summarize(results),
         "summary_by_type": summarize_by_type(results),
     }
+
+
+def dose_expressions(text: str, config: NormalizationConfig = DEFAULT_NORMALIZATION) -> List[str]:
+    """Normalized number+unit strings inside `text`, e.g.
+    "Nervsenz 75mg/10mg Tablet" -> ["75 mg", "10 mg"]."""
+    return [f"{m.group(1)} {m.group(2).lower()}" for m in _DOSE_CAPTURE.finditer(normalize_text(text, config))]
+
+
+def dose_preserved(entity_text: str, hypothesis: Optional[str], config: NormalizationConfig = DEFAULT_NORMALIZATION) -> Optional[bool]:
+    """True if every dose expression in the entity appears as a token
+    sequence in the normalized hypothesis; None if the entity has no dose.
+
+    Separates "was the dose kept" from "was the brand name kept". Strict:
+    spoken forms ("five hundred", "grams per deciliter") count as not
+    preserved. Unvalidated like all entity matching here.
+    """
+    doses = dose_expressions(entity_text, config)
+    if not doses:
+        return None
+    hyp_tokens = normalize_text(hypothesis or "", config).split()
+    for dose in doses:
+        needle = dose.split()
+        if not any(hyp_tokens[i : i + len(needle)] == needle for i in range(len(hyp_tokens) - len(needle) + 1)):
+            return False
+    return True
 # ---- end src/clinasr/medical_entities.py ----
 
 # ---- begin src/clinasr/noise.py (sha256:68b1b8316d1cbb82) ----
@@ -1513,7 +1552,7 @@ def stratified_select(
     )
 # ---- end src/clinasr/sampling.py ----
 
-# ---- begin src/clinasr/stage2.py (sha256:2433490281f195fd) ----
+# ---- begin src/clinasr/stage2.py (sha256:1a1676c4818c7915) ----
 """Stage 2: Whisper-tiny.en vs Whisper-base.en on one fixed stratified subset.
 
 Design (docs/WORKLOG.md has the rationale and the real population counts):
@@ -1637,19 +1676,20 @@ def prediction_rows(records: Sequence[Dict[str, Any]], hypotheses: Sequence[str]
     ]
 
 
-def summary_rows(rows: Sequence[Dict[str, Any]], model_id: str) -> List[Dict[str, Any]]:
+def summary_rows(rows: Sequence[Dict[str, Any]], model_id: str, config=DEFAULT_NORMALIZATION) -> List[Dict[str, Any]]:
     """Corpus WER/CER overall and per stratum for one model's rows."""
     groups: Dict[str, List[Dict[str, Any]]] = {"ALL": list(rows)}
     for row in rows:
         groups.setdefault(f"{row['recording_context']} | {row['type_concept']}", []).append(row)
     out = []
     for stratum, group in groups.items():
-        metrics = compute_metrics([g["sample_id"] for g in group], [g["reference"] for g in group], [g["hypothesis"] for g in group])
+        metrics = compute_metrics([g["sample_id"] for g in group], [g["reference"] for g in group], [g["hypothesis"] for g in group], config)
         corpus = compute_corpus_metric(metrics)
         out.append(
             {
                 "model": model_id,
                 "condition": "clean",
+                "normalization": config.version,
                 "stratum": stratum,
                 "n_samples": corpus.n_samples_total,
                 "n_valid": corpus.n_samples_valid,
