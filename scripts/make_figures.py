@@ -27,13 +27,13 @@ COLORS = {T: "#4C72B0", B: "#DD8452"}
 CONDS = ["clean", "snr_20db", "snr_10db", "snr_0db"]
 COND_LABELS = ["clean", "20 dB", "10 dB", "0 dB"]
 
-plt.rcParams.update({"figure.dpi": 150, "savefig.bbox": "tight", "font.size": 10,
+plt.rcParams.update({"svg.hashsalt": "clinasr", "figure.dpi": 150, "savefig.bbox": "tight", "font.size": 10,
                      "axes.spines.top": False, "axes.spines.right": False})
 
 
 def save(fig, name):
-    for ext in ("png", "svg"):
-        fig.savefig(OUT / f"{name}.{ext}")
+    fig.savefig(OUT / f"{name}.png")
+    fig.savefig(OUT / f"{name}.svg", metadata={"Date": None})
     plt.close(fig)
 
 
@@ -73,8 +73,8 @@ def fig2(F):
     ax.set_xticks([0, 1], ["normalization v2", "normalization v3"])
     ax.set_ylabel("Share of annotated entities matched")
     ax.set_ylim(0, 0.75)
-    ax.set_title(f"Automatic lexical entity match rate (UNVALIDATED), n = {n} entity instances per model", fontsize=9)
-    ax.legend(frameon=False)
+    ax.set_title(f"Unvalidated strict lexical entity match rate, n = {n} entity instances per model", fontsize=9)
+    ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=2)
     save(fig, "fig2_entity_match_rate")
 
 
@@ -103,13 +103,18 @@ def fig3b(F):
     for i, model in enumerate((T, B)):
         bars = ax.bar([x + (i - 0.5) * w for x in (0, 1)], [e[model][k]["rate"] for k in keys], w,
                       label=NAMES[model], color=COLORS[model])
-        bar_labels(ax, bars, "{:.2f}")
+        for b, k in zip(bars, keys):
+            ax.annotate(f"{e[model][k]['matched']}/{e[model][k]['n']}\n({e[model][k]['rate']:.2f})",
+                        (b.get_x() + b.get_width() / 2, b.get_height()), ha="center", va="bottom",
+                        fontsize=8, xytext=(0, 2), textcoords="offset points")
     n = e[T]["dose_preserved"]["n"]
-    ax.set_xticks([0, 1], ["whole entity matched\n(brand + dose)", "dose expression\npreserved exactly"])
-    ax.set_ylabel(f"Share of {n} dose-bearing entities")
-    ax.set_ylim(0, 0.65)
-    ax.set_title("Dose-bearing drug entities: whole-entity vs dose-only check\n(automatic, unvalidated; small n)", fontsize=9)
-    ax.legend(frameon=False)
+    ax.set_xticks([0, 1], ["complete annotated\nentity matched", "dose expression\npreserved exactly"])
+    ax.set_ylabel(f"Share of {n} dose-bearing drug entities")
+    ax.set_ylim(0, 0.7)
+    ax.set_title("Complete dose-bearing drug entity vs dose expression only\n"
+                 "(unvalidated lexical checks; a complete-entity failure can come from any component;\n"
+                 "brand-name accuracy not measured separately; n = 46)", fontsize=8)
+    ax.legend(frameon=False, loc="upper left")
     save(fig, "fig3b_dose_vs_whole_entity")
 
 
@@ -117,15 +122,17 @@ def fig4(F):
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.6), sharey=False)
     for ax, metric in zip(axes, ("wer", "cer")):
         for model in (T, B):
-            for v, style in (("v2", "-"), ("v3", "--")):
+            for v, style, marker, fill in (("v2", "-", "o", True), ("v3", "--", "s", False)):
                 m = F["stage4"]["by_normalization"][v]["metrics"]
-                ax.plot(range(4), [m[c][model]["ALL"][metric] for c in CONDS], style, marker="o",
-                        color=COLORS[model], label=f"{NAMES[model]} ({v})")
+                ax.plot(range(4), [m[c][model]["ALL"][metric] for c in CONDS], style, marker=marker, ms=6,
+                        lw=1.8, color=COLORS[model], markerfacecolor=COLORS[model] if fill else "white",
+                        label=f"{NAMES[model]}, normalization {v}")
         ax.set_xticks(range(4), COND_LABELS)
         ax.set_xlabel("SNR, additive white noise (categorical)")
         ax.set_ylabel(f"Corpus {metric.upper()}")
         ax.axhline(1.0, color="grey", lw=0.6, ls=":")
-    axes[0].legend(frameon=False, fontsize=7)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=2, frameon=False, fontsize=8, bbox_to_anchor=(0.5, -0.12))
     fig.suptitle("Noise robustness on the same 300 samples (values > 1 = more errors than reference words)", fontsize=9)
     save(fig, "fig4_noise_wer_cer")
 
@@ -142,7 +149,8 @@ def fig5(F):
     ax.set_xticks(range(4), COND_LABELS)
     ax.set_ylabel("WER(v3) − WER(v2)")
     ax.set_title("Effect of normalization v3 (hyphen splitting) on WER\n"
-                 "negative = v3 more lenient; positive = hyphen-joined hallucination loops now counted per word", fontsize=9)
+                 "negative = lower WER under v3; positive = higher WER under v3\n"
+                 "(the 0 dB increase reflects hyphen-joined repetition loops now counted word by word)", fontsize=9)
     ax.legend(frameon=False)
     save(fig, "fig5_normalization_v2_vs_v3")
 
@@ -176,8 +184,8 @@ def fig7(F):
                     ha="center", va="bottom", fontsize=8, xytext=(0, 2), textcoords="offset points")
     ax.set_xticks(range(len(cats)), [c.replace("_", "\n") for c in cats], fontsize=8)
     ax.set_ylim(0, 1.1)
-    ax.set_ylabel("Share of flagged spans judged a\nmeaningful discrepancy (span level)")
-    ax.set_title("Flag precision by category on the 104-row review sample\n(AI-assisted span labels; text only)", fontsize=9)
+    ax.set_ylabel("Share of reviewed flags judged\nmeaningful (span level)")
+    ax.set_title("Share of reviewed flags judged meaningful by\nAI-assisted span-level assessment (text only)", fontsize=9)
     ax = axes[1]
     labels = ["significant", "not_significant", "unclear"]
     ov = L["span_level_detector_precision"]["overall"]
@@ -192,7 +200,11 @@ def fig7(F):
     ax.set_xticks([0, 1], ["flagged span\nonly", "visible\ncontext"])
     ax.set_ylabel("Review rows (n = 104)")
     ax.set_title("Same rows, two questions\n(AI-assisted; not prevalence)", fontsize=9)
-    ax.legend(frameon=False, fontsize=7)
+    ax.legend(frameon=False, fontsize=7, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    fig.text(0.01, -0.06, "104 review cases were selected, not randomly sampled; a flag can belong to several categories; "
+             "labels are AI-assisted and text-only.\nProportions describe the reviewed cases only, not population-level "
+             "detector precision or error rates. Span vs context assessments answer different questions.",
+             fontsize=7.5, ha="left", va="top")
     save(fig, "fig7_span_vs_context")
 
 
@@ -214,11 +226,17 @@ def fig8(F):
     save(fig, "fig8_human_vs_ai_labels")
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    import argparse
+
+    figures = {f.__name__: f for f in (fig1, fig2, fig3, fig3b, fig4, fig5, fig6, fig7, fig8)}
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--only", nargs="+", choices=sorted(figures), help="regenerate only these figures")
+    args = parser.parse_args(argv)
     F = json.loads(DATA.read_text(encoding="utf-8"))
     OUT.mkdir(parents=True, exist_ok=True)
-    for f in (fig1, fig2, fig3, fig3b, fig4, fig5, fig6, fig7, fig8):
-        f(F)
+    for name in args.only or list(figures):
+        figures[name](F)
     print(f"wrote {len(list(OUT.glob('*.png')))} PNG + {len(list(OUT.glob('*.svg')))} SVG to {OUT.relative_to(ROOT)}")
     return 0
 

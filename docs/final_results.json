@@ -1,0 +1,2071 @@
+{
+  "generated_by": "scripts/collect_final_results.py",
+  "validated_entity_labels": false,
+  "stage1_smoke": {
+    "model": "openai/whisper-tiny.en",
+    "n": 5,
+    "wer": 0.25471698113207547,
+    "cer": 0.15384615384615385,
+    "note": "5 samples, first-N selection, pre-v2 normalization; historical only"
+  },
+  "dataset": {
+    "n_records": 3619,
+    "n_sessions": 3524,
+    "duration_seconds": {
+      "total": 30245.128831118345,
+      "min": 0.47999998927116394,
+      "median": 4.860000133514404,
+      "max": 29.988624572753906
+    },
+    "annotation_status": {
+      "ok": 3561,
+      "empty": 10,
+      "partial": 48
+    },
+    "n_entities": 10661,
+    "category_entity_counts": {
+      "clinical_findings": 5615,
+      "drugs": 2504,
+      "misc_medical": 1145,
+      "diagnostics": 1021,
+      "advices": 376
+    },
+    "category_sample_counts": {
+      "clinical_findings": 2123,
+      "drugs": 1931,
+      "diagnostics": 480,
+      "misc_medical": 473,
+      "advices": 287
+    },
+    "n_samples_with_drugs": 1931,
+    "n_dosage_like_drug_entities": 684,
+    "n_samples_with_dosage_like_drug_entity": 681,
+    "offsets_checked": 10585,
+    "offsets_aligned": 10585,
+    "strata": [
+      {
+        "values": {
+          "recording_context": "narration_entity",
+          "type_concept": "drugs"
+        },
+        "count": 1097,
+        "duration_seconds": 4290.686561226845
+      },
+      {
+        "values": {
+          "recording_context": "narration_entity",
+          "type_concept": "clinical_findings"
+        },
+        "count": 852,
+        "duration_seconds": 3442.337816119194
+      },
+      {
+        "values": {
+          "recording_context": "narration_sentence",
+          "type_concept": "drugs"
+        },
+        "count": 669,
+        "duration_seconds": 10150.255636632442
+      },
+      {
+        "values": {
+          "recording_context": "narration_sentence",
+          "type_concept": "misc_medical"
+        },
+        "count": 286,
+        "duration_seconds": 4230.050505250692
+      },
+      {
+        "values": {
+          "recording_context": "narration_sentence",
+          "type_concept": "diagnostics"
+        },
+        "count": 238,
+        "duration_seconds": 3736.348314702511
+      },
+      {
+        "values": {
+          "recording_context": "narration_entity",
+          "type_concept": "advices"
+        },
+        "count": 201,
+        "duration_seconds": 824.2880010604858
+      },
+      {
+        "values": {
+          "recording_context": "conversation",
+          "type_concept": "misc_medical"
+        },
+        "count": 110,
+        "duration_seconds": 1605.3013727664948
+      },
+      {
+        "values": {
+          "recording_context": "narration_sentence",
+          "type_concept": "clinical_findings"
+        },
+        "count": 110,
+        "duration_seconds": 1766.39262342453
+      },
+      {
+        "values": {
+          "recording_context": "narration_entity",
+          "type_concept": "diagnostics"
+        },
+        "count": 56,
+        "duration_seconds": 199.46799993515015
+      }
+    ]
+  },
+  "stage2": {
+    "n_samples": 300,
+    "fingerprint": "8b345d92bc204dedebe465065dac1993ac1e48c6cd55f408a12e47117d84a6c3",
+    "allocation": {
+      "conversation | misc_medical": 23,
+      "narration_entity | advices": 26,
+      "narration_entity | clinical_findings": 49,
+      "narration_entity | diagnostics": 21,
+      "narration_entity | drugs": 58,
+      "narration_sentence | clinical_findings": 23,
+      "narration_sentence | diagnostics": 28,
+      "narration_sentence | drugs": 43,
+      "narration_sentence | misc_medical": 29
+    },
+    "environment": {
+      "python": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+      "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "cuda_available": true,
+      "cuda_device": "Tesla T4"
+    },
+    "by_normalization": {
+      "v1": {
+        "metrics": {
+          "openai/whisper-tiny.en": {
+            "ALL": {
+              "wer": 0.26646189287771166,
+              "cer": 0.1227810650887574,
+              "n": 300
+            },
+            "narration_sentence | misc_medical": {
+              "wer": 0.1550468262226847,
+              "cer": 0.09041095890410959,
+              "n": 29
+            },
+            "narration_sentence | diagnostics": {
+              "wer": 0.3086574654956085,
+              "cer": 0.15785288270377734,
+              "n": 28
+            },
+            "narration_sentence | drugs": {
+              "wer": 0.1657718120805369,
+              "cer": 0.0607789358200768,
+              "n": 43
+            },
+            "narration_sentence | clinical_findings": {
+              "wer": 0.1374233128834356,
+              "cer": 0.05116116640474943,
+              "n": 23
+            },
+            "conversation | misc_medical": {
+              "wer": 0.26046511627906976,
+              "cer": 0.14897900488927235,
+              "n": 23
+            },
+            "narration_entity | advices": {
+              "wer": 0.5104166666666666,
+              "cer": 0.24865831842576028,
+              "n": 26
+            },
+            "narration_entity | clinical_findings": {
+              "wer": 0.9075144508670521,
+              "cer": 0.3596345514950166,
+              "n": 49
+            },
+            "narration_entity | drugs": {
+              "wer": 1.130952380952381,
+              "cer": 0.46174617461746176,
+              "n": 58
+            },
+            "narration_entity | diagnostics": {
+              "wer": 1.09375,
+              "cer": 0.5506493506493506,
+              "n": 21
+            }
+          },
+          "openai/whisper-base.en": {
+            "ALL": {
+              "wer": 0.20349395277404492,
+              "cer": 0.09085305719921105,
+              "n": 300
+            },
+            "narration_sentence | misc_medical": {
+              "wer": 0.11030176899063475,
+              "cer": 0.06678082191780822,
+              "n": 29
+            },
+            "narration_sentence | diagnostics": {
+              "wer": 0.27854454203262236,
+              "cer": 0.13876739562624255,
+              "n": 28
+            },
+            "narration_sentence | drugs": {
+              "wer": 0.12885906040268458,
+              "cer": 0.04147010422380691,
+              "n": 43
+            },
+            "narration_sentence | clinical_findings": {
+              "wer": 0.10797546012269939,
+              "cer": 0.041208311506897154,
+              "n": 23
+            },
+            "conversation | misc_medical": {
+              "wer": 0.21395348837209302,
+              "cer": 0.12424503882657463,
+              "n": 23
+            },
+            "narration_entity | advices": {
+              "wer": 0.375,
+              "cer": 0.18962432915921287,
+              "n": 26
+            },
+            "narration_entity | clinical_findings": {
+              "wer": 0.5144508670520231,
+              "cer": 0.20930232558139536,
+              "n": 49
+            },
+            "narration_entity | drugs": {
+              "wer": 0.7857142857142857,
+              "cer": 0.2844284428442844,
+              "n": 58
+            },
+            "narration_entity | diagnostics": {
+              "wer": 0.890625,
+              "cer": 0.36363636363636365,
+              "n": 21
+            }
+          }
+        },
+        "paired_base_minus_tiny": {
+          "model_a": "openai/whisper-tiny.en",
+          "model_b": "openai/whisper-base.en",
+          "n_samples": 300,
+          "wer_a": 0.26646189287771166,
+          "wer_b": 0.20349395277404492,
+          "difference": -0.06296794010366674,
+          "ci_low": -0.07776811510170392,
+          "ci_high": -0.048032718620902026,
+          "n_bootstrap": 2000,
+          "seed": 0,
+          "n_b_better": 162,
+          "n_a_better": 45,
+          "n_tied": 93
+        }
+      },
+      "v2": {
+        "metrics": {
+          "openai/whisper-tiny.en": {
+            "ALL": {
+              "wer": 0.2576535463015783,
+              "cer": 0.12185365253246354,
+              "n": 300
+            },
+            "narration_sentence | misc_medical": {
+              "wer": 0.1550468262226847,
+              "cer": 0.09041095890410959,
+              "n": 29
+            },
+            "narration_sentence | diagnostics": {
+              "wer": 0.3086574654956085,
+              "cer": 0.15785288270377734,
+              "n": 28
+            },
+            "narration_sentence | drugs": {
+              "wer": 0.14856020942408377,
+              "cer": 0.058997050147492625,
+              "n": 43
+            },
+            "narration_sentence | clinical_findings": {
+              "wer": 0.1374233128834356,
+              "cer": 0.05116116640474943,
+              "n": 23
+            },
+            "conversation | misc_medical": {
+              "wer": 0.26046511627906976,
+              "cer": 0.14897900488927235,
+              "n": 23
+            },
+            "narration_entity | advices": {
+              "wer": 0.5104166666666666,
+              "cer": 0.24865831842576028,
+              "n": 26
+            },
+            "narration_entity | clinical_findings": {
+              "wer": 0.8636363636363636,
+              "cer": 0.35625517812758906,
+              "n": 49
+            },
+            "narration_entity | drugs": {
+              "wer": 1.0282485875706215,
+              "cer": 0.4517857142857143,
+              "n": 58
+            },
+            "narration_entity | diagnostics": {
+              "wer": 1.09375,
+              "cer": 0.5506493506493506,
+              "n": 21
+            }
+          },
+          "openai/whisper-base.en": {
+            "ALL": {
+              "wer": 0.19737592698231604,
+              "cer": 0.09025170779740292,
+              "n": 300
+            },
+            "narration_sentence | misc_medical": {
+              "wer": 0.11030176899063475,
+              "cer": 0.06678082191780822,
+              "n": 29
+            },
+            "narration_sentence | diagnostics": {
+              "wer": 0.27854454203262236,
+              "cer": 0.13876739562624255,
+              "n": 28
+            },
+            "narration_sentence | drugs": {
+              "wer": 0.11321989528795812,
+              "cer": 0.04020539713755053,
+              "n": 43
+            },
+            "narration_sentence | clinical_findings": {
+              "wer": 0.10797546012269939,
+              "cer": 0.041208311506897154,
+              "n": 23
+            },
+            "conversation | misc_medical": {
+              "wer": 0.21395348837209302,
+              "cer": 0.12424503882657463,
+              "n": 23
+            },
+            "narration_entity | advices": {
+              "wer": 0.375,
+              "cer": 0.18962432915921287,
+              "n": 26
+            },
+            "narration_entity | clinical_findings": {
+              "wer": 0.5056818181818182,
+              "cer": 0.207953603976802,
+              "n": 49
+            },
+            "narration_entity | drugs": {
+              "wer": 0.7288135593220338,
+              "cer": 0.2785714285714286,
+              "n": 58
+            },
+            "narration_entity | diagnostics": {
+              "wer": 0.890625,
+              "cer": 0.36363636363636365,
+              "n": 21
+            }
+          }
+        },
+        "paired_base_minus_tiny": {
+          "model_a": "openai/whisper-tiny.en",
+          "model_b": "openai/whisper-base.en",
+          "n_samples": 300,
+          "wer_a": 0.2576535463015783,
+          "wer_b": 0.19737592698231604,
+          "difference": -0.06027761931926223,
+          "ci_low": -0.07528419997107415,
+          "ci_high": -0.04547829611245725,
+          "n_bootstrap": 2000,
+          "seed": 0,
+          "n_b_better": 157,
+          "n_a_better": 44,
+          "n_tied": 99
+        }
+      },
+      "v3": {
+        "metrics": {
+          "openai/whisper-tiny.en": {
+            "ALL": {
+              "wer": 0.25277203533170456,
+              "cer": 0.12040740968674996,
+              "n": 300
+            },
+            "narration_sentence | misc_medical": {
+              "wer": 0.15958549222797927,
+              "cer": 0.0898972602739726,
+              "n": 29
+            },
+            "narration_sentence | diagnostics": {
+              "wer": 0.30049261083743845,
+              "cer": 0.1554671968190855,
+              "n": 28
+            },
+            "narration_sentence | drugs": {
+              "wer": 0.1483160621761658,
+              "cer": 0.05757675079209003,
+              "n": 43
+            },
+            "narration_sentence | clinical_findings": {
+              "wer": 0.11163895486935867,
+              "cer": 0.04854199406320936,
+              "n": 23
+            },
+            "conversation | misc_medical": {
+              "wer": 0.25736434108527134,
+              "cer": 0.14869140063272937,
+              "n": 23
+            },
+            "narration_entity | advices": {
+              "wer": 0.5104166666666666,
+              "cer": 0.24865831842576028,
+              "n": 26
+            },
+            "narration_entity | clinical_findings": {
+              "wer": 0.875,
+              "cer": 0.35542667771333886,
+              "n": 49
+            },
+            "narration_entity | drugs": {
+              "wer": 1.0508474576271187,
+              "cer": 0.45089285714285715,
+              "n": 58
+            },
+            "narration_entity | diagnostics": {
+              "wer": 1.078125,
+              "cer": 0.548051948051948,
+              "n": 21
+            }
+          },
+          "openai/whisper-base.en": {
+            "ALL": {
+              "wer": 0.19263296372862243,
+              "cer": 0.08883623607606622,
+              "n": 300
+            },
+            "narration_sentence | misc_medical": {
+              "wer": 0.11398963730569948,
+              "cer": 0.06643835616438357,
+              "n": 29
+            },
+            "narration_sentence | diagnostics": {
+              "wer": 0.2733990147783251,
+              "cer": 0.136779324055666,
+              "n": 28
+            },
+            "narration_sentence | drugs": {
+              "wer": 0.1094559585492228,
+              "cer": 0.0386758439855785,
+              "n": 43
+            },
+            "narration_sentence | clinical_findings": {
+              "wer": 0.08907363420427554,
+              "cer": 0.0392875851231011,
+              "n": 23
+            },
+            "conversation | misc_medical": {
+              "wer": 0.21550387596899226,
+              "cer": 0.12424503882657463,
+              "n": 23
+            },
+            "narration_entity | advices": {
+              "wer": 0.3645833333333333,
+              "cer": 0.18604651162790697,
+              "n": 26
+            },
+            "narration_entity | clinical_findings": {
+              "wer": 0.5056818181818182,
+              "cer": 0.20629660314830156,
+              "n": 49
+            },
+            "narration_entity | drugs": {
+              "wer": 0.7344632768361582,
+              "cer": 0.27589285714285716,
+              "n": 58
+            },
+            "narration_entity | diagnostics": {
+              "wer": 0.875,
+              "cer": 0.35844155844155845,
+              "n": 21
+            }
+          }
+        },
+        "paired_base_minus_tiny": {
+          "model_a": "openai/whisper-tiny.en",
+          "model_b": "openai/whisper-base.en",
+          "n_samples": 300,
+          "wer_a": 0.25277203533170456,
+          "wer_b": 0.19263296372862243,
+          "difference": -0.06013907160308213,
+          "ci_low": -0.07438861291216983,
+          "ci_high": -0.046305931119206646,
+          "n_bootstrap": 2000,
+          "seed": 0,
+          "n_b_better": 158,
+          "n_a_better": 43,
+          "n_tied": 99
+        }
+      }
+    }
+  },
+  "stage4": {
+    "environment": {
+      "python": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+      "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+      "torch": "2.11.0+cu128",
+      "cuda_available": true,
+      "cuda_device": "Tesla T4"
+    },
+    "by_normalization": {
+      "v2": {
+        "metrics": {
+          "clean": {
+            "openai/whisper-tiny.en": {
+              "ALL": {
+                "wer": 0.2576535463015783,
+                "cer": 0.12185365253246354,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.1550468262226847,
+                "cer": 0.09041095890410959,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.3086574654956085,
+                "cer": 0.15785288270377734,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.14856020942408377,
+                "cer": 0.058997050147492625,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.1374233128834356,
+                "cer": 0.05116116640474943,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.26046511627906976,
+                "cer": 0.14897900488927235,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.5104166666666666,
+                "cer": 0.24865831842576028,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 0.8636363636363636,
+                "cer": 0.35625517812758906,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.0282485875706215,
+                "cer": 0.4517857142857143,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.09375,
+                "cer": 0.5506493506493506,
+                "n": 21
+              }
+            },
+            "openai/whisper-base.en": {
+              "ALL": {
+                "wer": 0.19737592698231604,
+                "cer": 0.09025170779740292,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.11030176899063475,
+                "cer": 0.06678082191780822,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.27854454203262236,
+                "cer": 0.13876739562624255,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.11321989528795812,
+                "cer": 0.04020539713755053,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.10797546012269939,
+                "cer": 0.041208311506897154,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.21395348837209302,
+                "cer": 0.12424503882657463,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.375,
+                "cer": 0.18962432915921287,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 0.5056818181818182,
+                "cer": 0.207953603976802,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 0.7288135593220338,
+                "cer": 0.2785714285714286,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 0.890625,
+                "cer": 0.36363636363636365,
+                "n": 21
+              }
+            }
+          },
+          "snr_20db": {
+            "openai/whisper-tiny.en": {
+              "ALL": {
+                "wer": 0.38334284084426695,
+                "cer": 0.2369991999507662,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.19250780437044746,
+                "cer": 0.11113013698630136,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.37766624843161856,
+                "cer": 0.2099403578528827,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.2054973821989529,
+                "cer": 0.08882333661094723,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.18773006134969325,
+                "cer": 0.07316221407368605,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.3627906976744186,
+                "cer": 0.45038826574633306,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.7916666666666666,
+                "cer": 0.38640429338103754,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 0.9090909090909091,
+                "cer": 0.4250207125103563,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.2429378531073447,
+                "cer": 0.9580357142857143,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 5.828125,
+                "cer": 3.6285714285714286,
+                "n": 21
+              }
+            },
+            "openai/whisper-base.en": {
+              "ALL": {
+                "wer": 0.2504278379920137,
+                "cer": 0.12025355406486553,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.14568158168574402,
+                "cer": 0.08202054794520548,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.3337515683814304,
+                "cer": 0.16978131212723657,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.1544502617801047,
+                "cer": 0.06205615645143669,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.13987730061349693,
+                "cer": 0.05500261917234154,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.2527131782945736,
+                "cer": 0.1555939027897613,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.53125,
+                "cer": 0.25402504472271914,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 0.6534090909090909,
+                "cer": 0.28334714167357083,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 0.9265536723163842,
+                "cer": 0.41964285714285715,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.0625,
+                "cer": 0.5116883116883116,
+                "n": 21
+              }
+            }
+          },
+          "snr_10db": {
+            "openai/whisper-tiny.en": {
+              "ALL": {
+                "wer": 0.733789693858148,
+                "cer": 0.4999692288756231,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.32882414151925077,
+                "cer": 0.1916095890410959,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 1.1580928481806776,
+                "cer": 0.8691848906560636,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.650523560209424,
+                "cer": 0.44870534251065225,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.4147239263803681,
+                "cer": 0.23450323031255457,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.5317829457364341,
+                "cer": 0.364394593039977,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 1.0208333333333333,
+                "cer": 0.5474060822898033,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 2.6363636363636362,
+                "cer": 2.128417564208782,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.6327683615819208,
+                "cer": 0.7910714285714285,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.46875,
+                "cer": 0.7246753246753247,
+                "n": 21
+              }
+            },
+            "openai/whisper-base.en": {
+              "ALL": {
+                "wer": 0.3977942574633961,
+                "cer": 0.20472029047941412,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.24141519250780438,
+                "cer": 0.1429794520547945,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.4755332496863237,
+                "cer": 0.23121272365805168,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.2709424083769634,
+                "cer": 0.12979351032448377,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.26134969325153373,
+                "cer": 0.11751353239043129,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.37209302325581395,
+                "cer": 0.25021570319240727,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.875,
+                "cer": 0.46332737030411447,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 1.1477272727272727,
+                "cer": 0.5302402651201326,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.4124293785310735,
+                "cer": 0.7107142857142857,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.21875,
+                "cer": 0.5948051948051948,
+                "n": 21
+              }
+            }
+          },
+          "snr_0db": {
+            "openai/whisper-tiny.en": {
+              "ALL": {
+                "wer": 1.9537934968625215,
+                "cer": 1.2864791679487968,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 1.6108220603537982,
+                "cer": 1.0965753424657534,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 2.2810539523212046,
+                "cer": 1.4972166998011929,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 1.6662303664921465,
+                "cer": 1.2198186386976948,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 1.849079754601227,
+                "cer": 0.9690937663698271,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 2.9937984496124033,
+                "cer": 2.193557664653437,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 1.3854166666666667,
+                "cer": 0.7871198568872988,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 1.8125,
+                "cer": 0.9088649544324772,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.9774011299435028,
+                "cer": 1.4267857142857143,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.921875,
+                "cer": 1.0285714285714285,
+                "n": 21
+              }
+            },
+            "openai/whisper-base.en": {
+              "ALL": {
+                "wer": 1.3635672181023009,
+                "cer": 0.8892239522432149,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.6555671175858481,
+                "cer": 0.3909246575342466,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 1.6863237139272271,
+                "cer": 1.1860834990059643,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.9332460732984293,
+                "cer": 0.6873156342182891,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 1.525153374233129,
+                "cer": 0.9483149991269425,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 1.945736434108527,
+                "cer": 1.262870290480299,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 1.2708333333333333,
+                "cer": 0.7227191413237924,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 4.096590909090909,
+                "cer": 2.264291632145816,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.807909604519774,
+                "cer": 0.9205357142857142,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.71875,
+                "cer": 0.9558441558441558,
+                "n": 21
+              }
+            }
+          }
+        },
+        "paired_base_minus_tiny": {
+          "clean": {
+            "model_a": "openai/whisper-tiny.en",
+            "model_b": "openai/whisper-base.en",
+            "n_samples": 300,
+            "wer_a": 0.2576535463015783,
+            "wer_b": 0.19737592698231604,
+            "difference": -0.06027761931926223,
+            "ci_low": -0.07528419997107415,
+            "ci_high": -0.04547829611245725,
+            "n_bootstrap": 2000,
+            "seed": 0,
+            "n_b_better": 157,
+            "n_a_better": 44,
+            "n_tied": 99
+          },
+          "snr_20db": {
+            "model_a": "openai/whisper-tiny.en",
+            "model_b": "openai/whisper-base.en",
+            "n_samples": 300,
+            "wer_a": 0.38334284084426695,
+            "wer_b": 0.2504278379920137,
+            "difference": -0.13291500285225327,
+            "ci_low": -0.2626168585590196,
+            "ci_high": -0.06370060220377513,
+            "n_bootstrap": 2000,
+            "seed": 0,
+            "n_b_better": 169,
+            "n_a_better": 41,
+            "n_tied": 90
+          },
+          "snr_10db": {
+            "model_a": "openai/whisper-tiny.en",
+            "model_b": "openai/whisper-base.en",
+            "n_samples": 300,
+            "wer_a": 0.733789693858148,
+            "wer_b": 0.3977942574633961,
+            "difference": -0.3359954363947519,
+            "ci_low": -0.5957330612873107,
+            "ci_high": -0.14445910643859158,
+            "n_bootstrap": 2000,
+            "seed": 0,
+            "n_b_better": 198,
+            "n_a_better": 56,
+            "n_tied": 46
+          },
+          "snr_0db": {
+            "model_a": "openai/whisper-tiny.en",
+            "model_b": "openai/whisper-base.en",
+            "n_samples": 300,
+            "wer_a": 1.9537934968625215,
+            "wer_b": 1.3635672181023009,
+            "difference": -0.5902262787602206,
+            "ci_low": -1.1190977678745186,
+            "ci_high": -0.0843366388381027,
+            "n_bootstrap": 2000,
+            "seed": 0,
+            "n_b_better": 184,
+            "n_a_better": 62,
+            "n_tied": 54
+          }
+        },
+        "degradation_vs_clean": {
+          "openai/whisper-tiny.en": {
+            "snr_20db": {
+              "wer_increase": 0.12568929454268868,
+              "ci_low": 0.057182663755097354,
+              "ci_high": 0.25107169236493443,
+              "n": 300
+            },
+            "snr_10db": {
+              "wer_increase": 0.4761361475565697,
+              "ci_low": 0.2836934410641082,
+              "ci_high": 0.738744664238713,
+              "n": 300
+            },
+            "snr_0db": {
+              "wer_increase": 1.6961399505609431,
+              "ci_low": 1.281071254440032,
+              "ci_high": 2.1799541158700873,
+              "n": 300
+            }
+          },
+          "openai/whisper-base.en": {
+            "snr_20db": {
+              "wer_increase": 0.05305191100969764,
+              "ci_low": 0.0397481306572216,
+              "ci_high": 0.06697971060856694,
+              "n": 300
+            },
+            "snr_10db": {
+              "wer_increase": 0.20041833048108004,
+              "ci_low": 0.17563078356282544,
+              "ci_high": 0.2263384557155112,
+              "n": 300
+            },
+            "snr_0db": {
+              "wer_increase": 1.1661912911199848,
+              "ci_low": 0.814522551943226,
+              "ci_high": 1.5611225070502177,
+              "n": 300
+            }
+          }
+        }
+      },
+      "v3": {
+        "metrics": {
+          "clean": {
+            "openai/whisper-tiny.en": {
+              "ALL": {
+                "wer": 0.25277203533170456,
+                "cer": 0.12040740968674996,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.15958549222797927,
+                "cer": 0.0898972602739726,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.30049261083743845,
+                "cer": 0.1554671968190855,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.1483160621761658,
+                "cer": 0.05757675079209003,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.11163895486935867,
+                "cer": 0.04854199406320936,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.25736434108527134,
+                "cer": 0.14869140063272937,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.5104166666666666,
+                "cer": 0.24865831842576028,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 0.875,
+                "cer": 0.35542667771333886,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.0508474576271187,
+                "cer": 0.45089285714285715,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.078125,
+                "cer": 0.548051948051948,
+                "n": 21
+              }
+            },
+            "openai/whisper-base.en": {
+              "ALL": {
+                "wer": 0.19263296372862243,
+                "cer": 0.08883623607606622,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.11398963730569948,
+                "cer": 0.06643835616438357,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.2733990147783251,
+                "cer": 0.136779324055666,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.1094559585492228,
+                "cer": 0.0386758439855785,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.08907363420427554,
+                "cer": 0.0392875851231011,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.21550387596899226,
+                "cer": 0.12424503882657463,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.3645833333333333,
+                "cer": 0.18604651162790697,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 0.5056818181818182,
+                "cer": 0.20629660314830156,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 0.7344632768361582,
+                "cer": 0.27589285714285716,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 0.875,
+                "cer": 0.35844155844155845,
+                "n": 21
+              }
+            }
+          },
+          "snr_20db": {
+            "openai/whisper-tiny.en": {
+              "ALL": {
+                "wer": 0.3758691975192633,
+                "cer": 0.2349990768662687,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.19689119170984457,
+                "cer": 0.11078767123287671,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.3830049261083744,
+                "cer": 0.2077534791252485,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.1955958549222798,
+                "cer": 0.08663826067955861,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.1543942992874109,
+                "cer": 0.07019381875327396,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.3643410852713178,
+                "cer": 0.44923784872016104,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.78125,
+                "cer": 0.38461538461538464,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 0.9261363636363636,
+                "cer": 0.4217067108533554,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.2485875706214689,
+                "cer": 0.9571428571428572,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 5.828125,
+                "cer": 3.6155844155844155,
+                "n": 21
+              }
+            },
+            "openai/whisper-base.en": {
+              "ALL": {
+                "wer": 0.24487878218380005,
+                "cer": 0.11865345559726752,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.14818652849740932,
+                "cer": 0.08167808219178083,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.33620689655172414,
+                "cer": 0.16779324055666003,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.15090673575129535,
+                "cer": 0.060635857096034085,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.11163895486935867,
+                "cer": 0.05220883534136546,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.2527131782945736,
+                "cer": 0.1547310900201323,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.5104166666666666,
+                "cer": 0.2522361359570662,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 0.6477272727272727,
+                "cer": 0.28169014084507044,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 0.943502824858757,
+                "cer": 0.41696428571428573,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.046875,
+                "cer": 0.5064935064935064,
+                "n": 21
+              }
+            }
+          },
+          "snr_10db": {
+            "openai/whisper-tiny.en": {
+              "ALL": {
+                "wer": 0.7635782747603834,
+                "cer": 0.4969228875623115,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.3378238341968912,
+                "cer": 0.19041095890410958,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 1.1613300492610839,
+                "cer": 0.8666003976143141,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.7629533678756477,
+                "cer": 0.44269638369933356,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.3812351543942993,
+                "cer": 0.2313602235027065,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.5333333333333333,
+                "cer": 0.364106988783434,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 1.0104166666666667,
+                "cer": 0.5456171735241503,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 2.6420454545454546,
+                "cer": 2.127589063794532,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.655367231638418,
+                "cer": 0.7901785714285714,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.5,
+                "cer": 0.7194805194805195,
+                "n": 21
+              }
+            },
+            "openai/whisper-base.en": {
+              "ALL": {
+                "wer": 0.39503852659274574,
+                "cer": 0.2029663363899317,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.24559585492227978,
+                "cer": 0.14263698630136987,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 0.4753694581280788,
+                "cer": 0.2290258449304175,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 0.2700777202072539,
+                "cer": 0.12771768818966459,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 0.23634204275534443,
+                "cer": 0.11437052558058321,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 0.3751937984496124,
+                "cer": 0.25021570319240727,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 0.8645833333333334,
+                "cer": 0.46153846153846156,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 1.1704545454545454,
+                "cer": 0.5302402651201326,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.423728813559322,
+                "cer": 0.7071428571428572,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.25,
+                "cer": 0.5896103896103896,
+                "n": 21
+              }
+            }
+          },
+          "snr_0db": {
+            "openai/whisper-tiny.en": {
+              "ALL": {
+                "wer": 1.9432437511745912,
+                "cer": 1.2846636716105606,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 1.621761658031088,
+                "cer": 1.0957191780821918,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 2.2573891625615765,
+                "cer": 1.4946322067594433,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 1.6625647668393781,
+                "cer": 1.2181798317491532,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 1.8028503562945368,
+                "cer": 0.9652523136022351,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 2.9937984496124033,
+                "cer": 2.193557664653437,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 1.375,
+                "cer": 0.7835420393559929,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 1.8238636363636365,
+                "cer": 0.908036454018227,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.9774011299435028,
+                "cer": 1.425892857142857,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.921875,
+                "cer": 1.0285714285714285,
+                "n": 21
+              }
+            },
+            "openai/whisper-base.en": {
+              "ALL": {
+                "wer": 1.4380755497087014,
+                "cer": 0.8846082835866823,
+                "n": 300
+              },
+              "narration_sentence | misc_medical": {
+                "wer": 0.6518134715025907,
+                "cer": 0.3886986301369863,
+                "n": 29
+              },
+              "narration_sentence | diagnostics": {
+                "wer": 1.9236453201970443,
+                "cer": 1.1765407554671967,
+                "n": 28
+              },
+              "narration_sentence | drugs": {
+                "wer": 1.0628238341968912,
+                "cer": 0.6809789140172621,
+                "n": 43
+              },
+              "narration_sentence | clinical_findings": {
+                "wer": 1.5332541567695963,
+                "cer": 0.9441243233804785,
+                "n": 23
+              },
+              "conversation | misc_medical": {
+                "wer": 1.9441860465116279,
+                "cer": 1.2622950819672132,
+                "n": 23
+              },
+              "narration_entity | advices": {
+                "wer": 1.2604166666666667,
+                "cer": 0.7209302325581395,
+                "n": 26
+              },
+              "narration_entity | clinical_findings": {
+                "wer": 4.1022727272727275,
+                "cer": 2.2626346313173156,
+                "n": 49
+              },
+              "narration_entity | drugs": {
+                "wer": 1.807909604519774,
+                "cer": 0.9205357142857142,
+                "n": 58
+              },
+              "narration_entity | diagnostics": {
+                "wer": 1.75,
+                "cer": 0.9506493506493506,
+                "n": 21
+              }
+            }
+          }
+        },
+        "paired_base_minus_tiny": {
+          "clean": {
+            "model_a": "openai/whisper-tiny.en",
+            "model_b": "openai/whisper-base.en",
+            "n_samples": 300,
+            "wer_a": 0.25277203533170456,
+            "wer_b": 0.19263296372862243,
+            "difference": -0.06013907160308213,
+            "ci_low": -0.07438861291216983,
+            "ci_high": -0.046305931119206646,
+            "n_bootstrap": 2000,
+            "seed": 0,
+            "n_b_better": 158,
+            "n_a_better": 43,
+            "n_tied": 99
+          },
+          "snr_20db": {
+            "model_a": "openai/whisper-tiny.en",
+            "model_b": "openai/whisper-base.en",
+            "n_samples": 300,
+            "wer_a": 0.3758691975192633,
+            "wer_b": 0.24487878218380005,
+            "difference": -0.13099041533546324,
+            "ci_low": -0.25926623005338545,
+            "ci_high": -0.06249821564522267,
+            "n_bootstrap": 2000,
+            "seed": 0,
+            "n_b_better": 169,
+            "n_a_better": 43,
+            "n_tied": 88
+          },
+          "snr_10db": {
+            "model_a": "openai/whisper-tiny.en",
+            "model_b": "openai/whisper-base.en",
+            "n_samples": 300,
+            "wer_a": 0.7635782747603834,
+            "wer_b": 0.39503852659274574,
+            "difference": -0.3685397481676377,
+            "ci_low": -0.6331187682814848,
+            "ci_high": -0.17646031040567633,
+            "n_bootstrap": 2000,
+            "seed": 0,
+            "n_b_better": 195,
+            "n_a_better": 58,
+            "n_tied": 47
+          },
+          "snr_0db": {
+            "model_a": "openai/whisper-tiny.en",
+            "model_b": "openai/whisper-base.en",
+            "n_samples": 300,
+            "wer_a": 1.9432437511745912,
+            "wer_b": 1.4380755497087014,
+            "difference": -0.5051682014658898,
+            "ci_low": -1.0274772039448312,
+            "ci_high": 0.013655604862951823,
+            "n_bootstrap": 2000,
+            "seed": 0,
+            "n_b_better": 181,
+            "n_a_better": 65,
+            "n_tied": 54
+          }
+        },
+        "degradation_vs_clean": {
+          "openai/whisper-tiny.en": {
+            "snr_20db": {
+              "wer_increase": 0.12309716218755873,
+              "ci_low": 0.05536426198386327,
+              "ci_high": 0.24713433942853189,
+              "n": 300
+            },
+            "snr_10db": {
+              "wer_increase": 0.5108062394286789,
+              "ci_low": 0.3182342516302377,
+              "ci_high": 0.7816678249474343,
+              "n": 300
+            },
+            "snr_0db": {
+              "wer_increase": 1.6904717158428868,
+              "ci_low": 1.2782918521119093,
+              "ci_high": 2.1693708282251327,
+              "n": 300
+            }
+          },
+          "openai/whisper-base.en": {
+            "snr_20db": {
+              "wer_increase": 0.05224581845517762,
+              "ci_low": 0.038801373575617644,
+              "ci_high": 0.06641757399018265,
+              "n": 300
+            },
+            "snr_10db": {
+              "wer_increase": 0.2024055628641233,
+              "ci_low": 0.17741776225982395,
+              "ci_high": 0.22758032721320232,
+              "n": 300
+            },
+            "snr_0db": {
+              "wer_increase": 1.245442585980079,
+              "ci_low": 0.8921749980850788,
+              "ci_high": 1.6397711051541182,
+              "n": 300
+            }
+          }
+        }
+      }
+    },
+    "clean_reproduces_stage2_v2": true,
+    "noise_log": {
+      "clean|clean|clipped=False": 300,
+      "snr_0db|ok|clipped=False": 260,
+      "snr_0db|ok|clipped=True": 40,
+      "snr_10db|ok|clipped=False": 283,
+      "snr_10db|ok|clipped=True": 17,
+      "snr_20db|ok|clipped=False": 291,
+      "snr_20db|ok|clipped=True": 9
+    }
+  },
+  "entities": {
+    "v2": {
+      "openai/whisper-tiny.en": {
+        "ALL": {
+          "matched": 531,
+          "n": 1014,
+          "rate": 0.5236686390532544
+        },
+        "clinical_findings": {
+          "matched": 350,
+          "n": 532,
+          "rate": 0.6578947368421053
+        },
+        "diagnostics": {
+          "matched": 41,
+          "n": 122,
+          "rate": 0.3360655737704918
+        },
+        "misc_medical": {
+          "matched": 73,
+          "n": 111,
+          "rate": 0.6576576576576577
+        },
+        "drugs": {
+          "matched": 43,
+          "n": 196,
+          "rate": 0.2193877551020408
+        },
+        "dose_preserved": {
+          "matched": 20,
+          "n": 46,
+          "rate": 0.43478260869565216
+        },
+        "dose_entity_whole_match": {
+          "matched": 0,
+          "n": 46,
+          "rate": 0.0
+        },
+        "advices": {
+          "matched": 24,
+          "n": 53,
+          "rate": 0.4528301886792453
+        }
+      },
+      "openai/whisper-base.en": {
+        "ALL": {
+          "matched": 592,
+          "n": 1014,
+          "rate": 0.5838264299802761
+        },
+        "clinical_findings": {
+          "matched": 384,
+          "n": 532,
+          "rate": 0.7218045112781954
+        },
+        "diagnostics": {
+          "matched": 47,
+          "n": 122,
+          "rate": 0.38524590163934425
+        },
+        "misc_medical": {
+          "matched": 81,
+          "n": 111,
+          "rate": 0.7297297297297297
+        },
+        "drugs": {
+          "matched": 54,
+          "n": 196,
+          "rate": 0.2755102040816326
+        },
+        "dose_preserved": {
+          "matched": 21,
+          "n": 46,
+          "rate": 0.45652173913043476
+        },
+        "dose_entity_whole_match": {
+          "matched": 1,
+          "n": 46,
+          "rate": 0.021739130434782608
+        },
+        "advices": {
+          "matched": 26,
+          "n": 53,
+          "rate": 0.49056603773584906
+        }
+      }
+    },
+    "v3": {
+      "openai/whisper-tiny.en": {
+        "ALL": {
+          "matched": 539,
+          "n": 1014,
+          "rate": 0.5315581854043393
+        },
+        "clinical_findings": {
+          "matched": 354,
+          "n": 532,
+          "rate": 0.6654135338345865
+        },
+        "diagnostics": {
+          "matched": 42,
+          "n": 122,
+          "rate": 0.3442622950819672
+        },
+        "misc_medical": {
+          "matched": 74,
+          "n": 111,
+          "rate": 0.6666666666666666
+        },
+        "drugs": {
+          "matched": 45,
+          "n": 196,
+          "rate": 0.22959183673469388
+        },
+        "dose_preserved": {
+          "matched": 21,
+          "n": 46,
+          "rate": 0.45652173913043476
+        },
+        "dose_entity_whole_match": {
+          "matched": 0,
+          "n": 46,
+          "rate": 0.0
+        },
+        "advices": {
+          "matched": 24,
+          "n": 53,
+          "rate": 0.4528301886792453
+        }
+      },
+      "openai/whisper-base.en": {
+        "ALL": {
+          "matched": 605,
+          "n": 1014,
+          "rate": 0.596646942800789
+        },
+        "clinical_findings": {
+          "matched": 389,
+          "n": 532,
+          "rate": 0.731203007518797
+        },
+        "diagnostics": {
+          "matched": 50,
+          "n": 122,
+          "rate": 0.4098360655737705
+        },
+        "misc_medical": {
+          "matched": 82,
+          "n": 111,
+          "rate": 0.7387387387387387
+        },
+        "drugs": {
+          "matched": 58,
+          "n": 196,
+          "rate": 0.29591836734693877
+        },
+        "dose_preserved": {
+          "matched": 24,
+          "n": 46,
+          "rate": 0.5217391304347826
+        },
+        "dose_entity_whole_match": {
+          "matched": 1,
+          "n": 46,
+          "rate": 0.021739130434782608
+        },
+        "advices": {
+          "matched": 26,
+          "n": 53,
+          "rate": 0.49056603773584906
+        }
+      }
+    }
+  },
+  "entity_agreement": {
+    "annotation_source": "AI-assisted (OpenAI GPT-6)",
+    "annotations_are_independent_human_labels": false,
+    "sheet": "results\\fetched_20261029T163039Z\\entity_review_sheet_labeled.csv",
+    "automatic_labels": "auto_label column (matcher output stored in the sheet)",
+    "sample_design": "stratified by model x automatic label (25 per cell); NOT representative of the dataset",
+    "original_labels": {
+      "n_labelled": 150,
+      "n_unclear": 0,
+      "n_blank": 0,
+      "observed_agreement": 0.9066666666666666,
+      "cohen_kappa": 0.776595744680851,
+      "per_class_auto_vs_labels": {
+        "preserved": {
+          "precision": 0.99,
+          "recall": 0.8839285714285714,
+          "f1": 0.9339622641509434,
+          "support_in_labels": 112
+        },
+        "not_preserved": {
+          "precision": 0.74,
+          "recall": 0.9736842105263158,
+          "f1": 0.8409090909090909,
+          "support_in_labels": 38
+        }
+      },
+      "confusion_auto_vs_human": {
+        "preserved->preserved": 99,
+        "preserved->not_preserved": 1,
+        "not_preserved->preserved": 13,
+        "not_preserved->not_preserved": 37
+      },
+      "agreement_by_auto_status": {
+        "exact": 1.0,
+        "normalized": 0.98,
+        "omitted": 0.74
+      },
+      "note": "Agreement on a sample stratified by model x automatic label; not representative of the dataset and not a population estimate of label accuracy."
+    },
+    "flagged_rows": [
+      {
+        "review_id": "29",
+        "flag": "contextual_negation_error",
+        "reason": "Target entity 'surgery' is lexically present; the hypothesis reverses its context (without surgery -> with surgery). Original label not_preserved is kept unchanged. Under the lexical Layer 1 definition the alternative is 'preserved'; the negation error belongs to Layer 2 (flagged there as a negation candidate)."
+      },
+      {
+        "review_id": "57",
+        "flag": "ambiguous_term_equivalence",
+        "reason": "'AP radiograph' (image) vs 'AP radiography' (procedure). Clinical equivalence is not established; original label kept, flagged for expert review."
+      }
+    ],
+    "sensitivity_excluding_flagged": {
+      "n_labelled": 148,
+      "n_unclear": 0,
+      "n_blank": 0,
+      "observed_agreement": 0.918918918918919,
+      "cohen_kappa": 0.8048780487804879,
+      "per_class_auto_vs_labels": {
+        "preserved": {
+          "precision": 1.0,
+          "recall": 0.8918918918918919,
+          "f1": 0.9428571428571428,
+          "support_in_labels": 111
+        },
+        "not_preserved": {
+          "precision": 0.7551020408163265,
+          "recall": 1.0,
+          "f1": 0.8604651162790697,
+          "support_in_labels": 37
+        }
+      },
+      "confusion_auto_vs_human": {
+        "preserved->preserved": 99,
+        "preserved->not_preserved": 0,
+        "not_preserved->preserved": 12,
+        "not_preserved->not_preserved": 37
+      },
+      "agreement_by_auto_status": {
+        "exact": 1.0,
+        "normalized": 1.0,
+        "omitted": 0.7551020408163265
+      },
+      "note": "Agreement on a sample stratified by model x automatic label; not representative of the dataset and not a population estimate of label accuracy."
+    },
+    "sensitivity_with_alternative_labels": {
+      "n_labelled": 149,
+      "n_unclear": 1,
+      "n_blank": 0,
+      "observed_agreement": 0.9194630872483222,
+      "cohen_kappa": 0.805398345668263,
+      "per_class_auto_vs_labels": {
+        "preserved": {
+          "precision": 1.0,
+          "recall": 0.8928571428571429,
+          "f1": 0.9433962264150945,
+          "support_in_labels": 112
+        },
+        "not_preserved": {
+          "precision": 0.7551020408163265,
+          "recall": 1.0,
+          "f1": 0.8604651162790697,
+          "support_in_labels": 37
+        }
+      },
+      "confusion_auto_vs_human": {
+        "preserved->preserved": 100,
+        "preserved->not_preserved": 0,
+        "not_preserved->preserved": 12,
+        "not_preserved->not_preserved": 37
+      },
+      "agreement_by_auto_status": {
+        "exact": 1.0,
+        "normalized": 1.0,
+        "omitted": 0.7551020408163265
+      },
+      "note": "Agreement on a sample stratified by model x automatic label; not representative of the dataset and not a population estimate of label accuracy."
+    },
+    "automatic_labels_recomputed_v3": {
+      "n_labelled": 150,
+      "n_unclear": 0,
+      "n_blank": 0,
+      "observed_agreement": 0.9266666666666666,
+      "cohen_kappa": 0.8202222706471998,
+      "per_class_auto_vs_labels": {
+        "preserved": {
+          "precision": 0.9902912621359223,
+          "recall": 0.9107142857142857,
+          "f1": 0.9488372093023257,
+          "support_in_labels": 112
+        },
+        "not_preserved": {
+          "precision": 0.7872340425531915,
+          "recall": 0.9736842105263158,
+          "f1": 0.8705882352941177,
+          "support_in_labels": 38
+        }
+      },
+      "confusion_auto_vs_human": {
+        "preserved->preserved": 102,
+        "preserved->not_preserved": 1,
+        "not_preserved->preserved": 10,
+        "not_preserved->not_preserved": 37
+      },
+      "agreement_by_auto_status": {
+        "exact": 1.0,
+        "normalized": 0.9811320754716981,
+        "omitted": 0.7872340425531915
+      },
+      "note": "Agreement on a sample stratified by model x automatic label; not representative of the dataset and not a population estimate of label accuracy."
+    }
+  },
+  "layer2": {
+    "n_candidates_clean": 431,
+    "by_op": {
+      "delete": 35,
+      "insert": 69,
+      "substitute": 327
+    },
+    "not_overlapping_annotated_entities": 101,
+    "by_model_category": {
+      "openai/whisper-base.en | dose_unit": 47,
+      "openai/whisper-base.en | drug_like_name": 15,
+      "openai/whisper-base.en | inserted_medical_term": 7,
+      "openai/whisper-base.en | medication_context": 121,
+      "openai/whisper-base.en | negation": 12,
+      "openai/whisper-base.en | number": 79,
+      "openai/whisper-tiny.en | dose_unit": 45,
+      "openai/whisper-tiny.en | drug_like_name": 16,
+      "openai/whisper-tiny.en | inserted_medical_term": 5,
+      "openai/whisper-tiny.en | medication_context": 135,
+      "openai/whisper-tiny.en | negation": 10,
+      "openai/whisper-tiny.en | number": 74
+    },
+    "stage4_by_condition_model": {
+      "clean | openai/whisper-base.en": 210,
+      "clean | openai/whisper-tiny.en": 221,
+      "snr_0db | openai/whisper-base.en": 326,
+      "snr_0db | openai/whisper-tiny.en": 337,
+      "snr_10db | openai/whisper-base.en": 276,
+      "snr_10db | openai/whisper-tiny.en": 309,
+      "snr_20db | openai/whisper-base.en": 215,
+      "snr_20db | openai/whisper-tiny.en": 242
+    }
+  },
+  "layer2_annotations": {
+    "n_rows": 104,
+    "n_unique_sample_model_pairs": 89,
+    "span_level_detector_precision": {
+      "overall": {
+        "significant": 60,
+        "n_decided": 102,
+        "rate": 0.5882352941176471,
+        "unclear": 2
+      },
+      "by_category": {
+        "dose_unit": {
+          "significant": 7,
+          "n_decided": 21,
+          "rate": 0.3333333333333333,
+          "unclear": 0
+        },
+        "drug_like_name": {
+          "significant": 20,
+          "n_decided": 21,
+          "rate": 0.9523809523809523,
+          "unclear": 0
+        },
+        "inserted_medical_term": {
+          "significant": 2,
+          "n_decided": 8,
+          "rate": 0.25,
+          "unclear": 0
+        },
+        "medication_context": {
+          "significant": 27,
+          "n_decided": 38,
+          "rate": 0.7105263157894737,
+          "unclear": 0
+        },
+        "negation": {
+          "significant": 6,
+          "n_decided": 17,
+          "rate": 0.35294117647058826,
+          "unclear": 2
+        },
+        "number": {
+          "significant": 12,
+          "n_decided": 20,
+          "rate": 0.6,
+          "unclear": 0
+        }
+      }
+    },
+    "context_label_counts": {
+      "not_significant": 18,
+      "significant": 83,
+      "unclear": 3
+    },
+    "context_labels_by_model": {
+      "openai/whisper-base.en | not_significant": 12,
+      "openai/whisper-base.en | significant": 39,
+      "openai/whisper-base.en | unclear": 1,
+      "openai/whisper-tiny.en | not_significant": 6,
+      "openai/whisper-tiny.en | significant": 44,
+      "openai/whisper-tiny.en | unclear": 2
+    },
+    "pairs_with_any_significant_context_label": 71,
+    "span_vs_context_disagreements": 24,
+    "review_label_reviewer_types": {
+      "ai_assisted": 74,
+      "human": 30
+    },
+    "span_label_reviewer_types": {
+      "ai_assisted": 104
+    },
+    "needs_human_confirmation": {
+      "false": 72,
+      "true": 32
+    },
+    "interpretation": "Text-only discrepancy annotations on a priority/stratified review sample. Span-level rate = share of flagged spans judged a meaningful discrepancy (heuristic precision on this sample only). Context-level labels are case-study judgements: not detector precision, not error prevalence, and not clinical significance.",
+    "provenance": "review_label: 30 rows reviewed by the user, VERIFIED 2026-10-30 against clinasr_human_review_final_30.csv (sha256 d5cea338dd12ed8d...): same 30 candidate_ids as the audit's human rows, 0 label mismatches (25 significant, 5 not_significant). That file was saved through Excel: TRUE/FALSE casing changed and ref_span '5-6' was auto-converted to the date '05-Jun' (candidate 585fef27f1c9b360), so only its labels are used; all raw text comes from layer2_review_sheet_v3.csv. 74 rows AI-assisted by OpenAI GPT-6 (ChatGPT). span/context-split labels: AI-assisted for all 104. Text-only; no audio replay, no clinician review.",
+    "human_vs_prior_ai_same_30_rows": {
+      "n": 30,
+      "agree": 26,
+      "pairs_prior_ai_to_human": {
+        "not_significant->not_significant": 5,
+        "not_significant->significant": 4,
+        "significant->significant": 21
+      },
+      "note": "Same 30 rows. The human reviewer may have seen the AI labels; not an independent double-annotation study."
+    }
+  },
+  "source_files_sha256": {
+    "results/20261029T150959Z_f96c5f60bc95/entity_coverage_report.json": "3f7151a2091a3bd1db884de55c8e70e38b0aa70e939ba8ba12876a94d0213888",
+    "results/fetched_20261029T143136Z/summary_metrics.csv": "190e8de4f76323d99dff8cebc693a42080098ef63b04a4ae9deabb050492bafe",
+    "results/fetched_20261029T163039Z/clinasr_human_review_final_30.csv": "d5cea338dd12ed8d77519f0e32ee8983f2c85619fd0381ba8b27a171c80c62b1",
+    "results/fetched_20261029T163039Z/clinasr_layer2_104_consistency_audited.csv": "21f1f59ff6f91d8dd0107fe00f3c77c7e272f864b49645e9be792d641b37b556",
+    "results/fetched_20261029T163039Z/entity_matches_v2.csv": "f5b119f89ea4fec07e3d897c76fc4c76f564a9bb3553648ec776eba74833e8c0",
+    "results/fetched_20261029T163039Z/entity_matches_v3.csv": "d0de6b9c473b7b6d2ff4ddc8cf1311ff4ff8cf3b95ce98e905ca92212036736c",
+    "results/fetched_20261029T163039Z/entity_review_agreement_v2.json": "4567c627a3958df008456e676330b87444e59aa3a11bcd8280a362414d8d32eb",
+    "results/fetched_20261029T163039Z/environment.json": "eb15e44d0cf7e06d1a026aa693a0698982e7ad0560aa692e32e5675db8c4630b",
+    "results/fetched_20261029T163039Z/layer2_audit_summary_v2.json": "a83ff7ddcc0b4e775a8e38e72d41a21110de65b54b96c15a6a5fd5d3ce2dc04c",
+    "results/fetched_20261029T163039Z/layer2_candidates_v3.csv": "ff056ab290035c2693262ceb4bd40225c10d5d5022c3e2d44509d223be34abca",
+    "results/fetched_20261029T163039Z/layer2_review_sheet_v3_labeled.csv": "c8947a83a90feec4305caeb3413008cdf224ee6816ecd2d337fa6264b91f5201",
+    "results/fetched_20261029T163039Z/layer2_summary_v3.json": "862fb1f5ab729ecae32cdeeb46a7afcf2ce4c7638b6c74d5a142eb187bb3cb20",
+    "results/fetched_20261029T163039Z/predictions.csv": "1d216a7c1b5ef3a0f9c3f987eab2abb55873e1fa6436012575452d06adcaded7",
+    "results/fetched_20261029T163039Z/selection.json": "4cf4fe9d48967e87b248aa71d32602d4bd03168164b722bbfab49088df3af8e1",
+    "results/fetched_20261029T163039Z/summary_metrics.csv": "7ca40b4db0b1d8952533b388e1b6415289254ad22420d8d00f0dfcfaec8d48da",
+    "results/fetched_20261029T163039Z/summary_metrics_v1.csv": "880e553400f379092fbcd791b2af1dd4dae615b065aa53bc3796e721a574e729",
+    "results/fetched_20261029T163039Z/summary_metrics_v2.csv": "3db5902f77534d49cf1eec31b6669c186bc9c24ff33f50efcf8162ae1f2f9f40",
+    "results/fetched_20261029T163039Z/summary_metrics_v3.csv": "3ec2e998f0d8efcf35df505e2e9a3653ca89211e6c2e5b7edff0267dead8609a",
+    "results/fetched_20261029T164654Z/environment.json": "eb15e44d0cf7e06d1a026aa693a0698982e7ad0560aa692e32e5675db8c4630b",
+    "results/fetched_20261029T164654Z/layer2_summary_v3.json": "898c8f18e10d1348ce6c1e58d1d9e577e488cf6064d9e982bbfdb4a68b2e49bd",
+    "results/fetched_20261029T164654Z/noise_log.csv": "2e9a9bd1270ab46cafd647335077c4d0a8bb6aa79783e040bfb0496e63a6b66d",
+    "results/fetched_20261029T164654Z/predictions.csv": "e978ef5f1e57ce7a1f9383680134a80273823851e756dc2ec4b8faf5cacbda1e",
+    "results/fetched_20261029T164654Z/summary_metrics.csv": "00128197a295ccd93b57548e2ef464470b0d0d33d20a4fbf92932b44c98fe30a",
+    "results/fetched_20261029T164654Z/summary_metrics_v2.csv": "95551259f1f468ce786e7453e6567354a17421f4c2cd6a1b3dcf5fe4f014cc2f",
+    "results/fetched_20261029T164654Z/summary_metrics_v3.csv": "396f1bd21a1cbcc7b1d026ae4f696b0320d3ed40a84a645fa06853508a337017"
+  }
+}
