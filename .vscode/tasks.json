@@ -38,12 +38,6 @@
       "problemMatcher": []
     },
     {
-      "label": "ClinASR: Kaggle logs",
-      "type": "shell",
-      "command": "python scripts/kaggle_workflow.py logs",
-      "problemMatcher": []
-    },
-    {
       "label": "ClinASR: Download results (new timestamped folder)",
       "type": "shell",
       "command": "python scripts/kaggle_workflow.py fetch",

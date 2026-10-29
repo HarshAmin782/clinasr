@@ -1,7 +1,7 @@
 """GENERATED FILE -- DO NOT EDIT DIRECTLY.
 
 Built by scripts/build_kaggle_script.py from src/clinasr/*.py.
-Source commit: 5c2f11170d4a
+Source commit: aa34eda4b915
 To change behavior, edit the source modules under src/clinasr/ and
 rebuild. This file is what Kaggle CLI uploads as the single code_file.
 """
@@ -767,7 +767,7 @@ def audit_hf_dataset(
     return audit_records(records)
 # ---- end src/clinasr/schema_audit.py ----
 
-# ---- begin src/clinasr/smoke_test.py (sha256:298ff1fbe34ed35a) ----
+# ---- begin src/clinasr/smoke_test.py (sha256:c2b36c1cfd77f2ae) ----
 """Phase 1, stage 1: five-sample Whisper-tiny.en smoke test on the real
 EkaCare dataset. Runs on a Kaggle GPU; nothing here is unit-testable end to
 end without one. Pure/data-shaping pieces (sample selection determinism,
@@ -906,7 +906,15 @@ def build_prediction_rows(
     for record, hypothesis in zip(records, hypotheses):
         rows.append(
             {
-                "sample_id": record.get("session_id"),
+                # `session_id` is NOT a unique per-record identifier: the
+                # real dataset's first 5 streamed records already contained
+                # a repeated session_id across two different utterances
+                # (one session = multiple recorded segments). `file_name`
+                # is the real per-record unique path and is used as the
+                # sample_id instead; `session_id` stays as its own grouping
+                # column so cross-model joins by sample_id are unambiguous.
+                # See docs/ISSUES.md.
+                "sample_id": record.get("file_name"),
                 "reference": record.get("text"),
                 "hypothesis": hypothesis,
                 "model": model_id,
@@ -1039,7 +1047,7 @@ def run_smoke_test(output_dir: Path, n: int = SMOKE_TEST_N, model_id: str = MODE
     return 0
 # ---- end src/clinasr/smoke_test.py ----
 
-# ---- begin src/clinasr/kaggle_entrypoint.py (sha256:80087a705f6b7f0e) ----
+# ---- begin src/clinasr/kaggle_entrypoint.py (sha256:c4a71ffa8c057f6a) ----
 """Entry point bundled into kaggle/run_clinasr.py by scripts/build_kaggle_script.py.
 
 `--self-test` (no GPU, no dataset, no model): proves the packaging pipeline
@@ -1057,24 +1065,39 @@ not exercised by this repository's unit tests.
 
 
 import argparse
+import json
 import platform
 import sys
 from pathlib import Path
 
 
 
-def _report_environment() -> None:
-    print(f"python: {sys.version.splitlines()[0]}")
-    print(f"platform: {platform.platform()}")
+def _report_environment() -> dict:
+    """Print AND return the environment report, so a caller with no `logs`
+    command available (this project's kaggle CLI version has none) can
+    persist it to a file instead of losing it once the console closes."""
+    report = {
+        "python": sys.version.splitlines()[0],
+        "platform": platform.platform(),
+        "torch": None,
+        "cuda_available": None,
+        "cuda_device": None,
+    }
+    print(f"python: {report['python']}")
+    print(f"platform: {report['platform']}")
     try:
         import torch  # local import: optional, heavy dependency
 
-        print(f"torch: {torch.__version__}")
-        print(f"cuda_available: {torch.cuda.is_available()}")
-        if torch.cuda.is_available():
-            print(f"cuda_device: {torch.cuda.get_device_name(0)}")
+        report["torch"] = torch.__version__
+        report["cuda_available"] = torch.cuda.is_available()
+        print(f"torch: {report['torch']}")
+        print(f"cuda_available: {report['cuda_available']}")
+        if report["cuda_available"]:
+            report["cuda_device"] = torch.cuda.get_device_name(0)
+            print(f"cuda_device: {report['cuda_device']}")
     except ImportError:
         print("torch: not available in this environment")
+    return report
 
 
 def _self_test_schema_audit() -> None:
@@ -1129,7 +1152,7 @@ def main(argv=None) -> int:
     )
     args = parser.parse_args(argv)
 
-    _report_environment()
+    env_report = _report_environment()
 
     if args.self_test:
         _self_test_schema_audit()
@@ -1137,7 +1160,11 @@ def main(argv=None) -> int:
         print("self-test: OK (no inference performed)")
         return 0
 
-    return run_smoke_test(Path(args.output_dir), n=args.n, model_id=args.model_id)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "environment.json").write_text(json.dumps(env_report, indent=2), encoding="utf-8")
+
+    return run_smoke_test(output_dir, n=args.n, model_id=args.model_id)
 
 
 if __name__ == "__main__":

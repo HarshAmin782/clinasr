@@ -1,25 +1,22 @@
 # Packages the Kaggle GPU runtime needs that may not already be in the
-# kernel's base image. Deliberately UNVERSIONED: this machine has no GPU and
-# no network-verified view of the current Kaggle Docker image, so pinning
-# exact torch/transformers/datasets versions here would be an invented
-# number (forbidden by AGENTS.md's research-integrity rules). Phase 1 pins
-# these for real once the Kaggle smoke-test run reports what actually
-# resolved -- the runtime mechanism for that is already in place:
-# clinasr.config.resolve_installed_versions() records every ACTUAL resolved
-# version into experiment_config.json / the run manifest on every run, so
-# the true versions used are always traceable even before this file is
-# pinned. See docs/ISSUES.md.
-transformers
-datasets
-jiwer
+# kernel's base image. Pinned to what ACTUALLY RESOLVED on a real Kaggle
+# run (kernel harshamin07/clinasr-medical-asr, run_id
+# 20261029T143029Z_nogit, captured via
+# clinasr.config.resolve_installed_versions() into that run's
+# experiment_config.json -- not guessed; see docs/ISSUES.md and
+# docs/WORKLOG.md's 2026-10-29 "First real Kaggle run" entry). `torch`
+# itself is deliberately left unpinned/unlisted: it's Kaggle's platform
+# CUDA-matched build (observed: 2.11.0+cu128), and AGENTS.md says not to
+# replace it. Re-verify these pins whenever Kaggle's base image changes.
+transformers==5.16.1
+datasets==4.8.5
+jiwer==4.0.0
 pandas
 matplotlib
 
 # Needed to decode the real dataset's Audio feature under datasets>=4.x
-# (torchcodec, not soundfile/librosa, is that library's decode backend as of
-# 2026-10-29). Depends on torch, which Kaggle's image already provides;
-# installing a mismatched torchcodec build against Kaggle's preinstalled
-# torch/CUDA is the main run-time risk here -- see docs/ISSUES.md #8.
-# clinasr.smoke_test.ensure_installed() reports (not silently swallows) an
-# install failure for this package.
-torchcodec
+# (torchcodec, not soundfile/librosa, is that library's decode backend).
+# Observed working version on Kaggle: 0.11.0+cu128 (matched to the
+# platform's torch 2.11.0+cu128 build -- pin the exact +cuXXX suffix only
+# if Kaggle's torch build changes and this stops resolving automatically).
+torchcodec==0.11.0

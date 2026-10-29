@@ -97,6 +97,30 @@ def test_budget_log_accumulates_across_pushes(isolated_repo):
     assert sum(e["requested_budget_minutes"] for e in log) == 30.0
 
 
+def test_kaggle_subprocess_env_leaves_existing_token_alone(monkeypatch):
+    monkeypatch.setenv("KAGGLE_API_TOKEN", "already-set-token")
+    env = kaggle_workflow._kaggle_subprocess_env()
+    assert env["KAGGLE_API_TOKEN"] == "already-set-token"
+
+
+def test_kaggle_subprocess_env_derives_token_from_credentials_file(tmp_path, monkeypatch):
+    monkeypatch.delenv("KAGGLE_API_TOKEN", raising=False)
+    creds_file = tmp_path / "kaggle.json"
+    creds_file.write_text('{"username":"someuser","key":"fake-test-key-not-real"}', encoding="utf-8")
+    monkeypatch.setattr(kaggle_workflow, "KAGGLE_CREDENTIALS_FILE", creds_file)
+
+    env = kaggle_workflow._kaggle_subprocess_env()
+    assert env["KAGGLE_API_TOKEN"] == "fake-test-key-not-real"
+
+
+def test_kaggle_subprocess_env_handles_missing_credentials_file(tmp_path, monkeypatch):
+    monkeypatch.delenv("KAGGLE_API_TOKEN", raising=False)
+    monkeypatch.setattr(kaggle_workflow, "KAGGLE_CREDENTIALS_FILE", tmp_path / "does-not-exist.json")
+
+    env = kaggle_workflow._kaggle_subprocess_env()
+    assert "KAGGLE_API_TOKEN" not in env
+
+
 def test_fetch_creates_new_timestamped_dir_each_time(isolated_repo):
     tmp_path, calls = isolated_repo
     _run(["init", "--username", "someuser"])

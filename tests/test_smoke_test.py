@@ -21,8 +21,8 @@ from clinasr.metrics import compute_corpus_metric, compute_metrics
 
 def _sample_records():
     return [
-        {"session_id": "s1", "text": "hello world", "recording_context": "clinic"},
-        {"session_id": "s2", "text": "take 2.5 mg", "recording_context": "pharmacy"},
+        {"session_id": "s1", "file_name": "/a/1.m4a", "text": "hello world", "recording_context": "clinic"},
+        {"session_id": "s2", "file_name": "/a/2.m4a", "text": "take 2.5 mg", "recording_context": "pharmacy"},
     ]
 
 
@@ -30,7 +30,7 @@ def test_build_prediction_rows_shapes_fields_correctly():
     records = _sample_records()
     rows = build_prediction_rows(records, ["hello world", "take 2.5mg"], model_id="openai/whisper-tiny.en")
     assert rows[0] == {
-        "sample_id": "s1",
+        "sample_id": "/a/1.m4a",
         "reference": "hello world",
         "hypothesis": "hello world",
         "model": "openai/whisper-tiny.en",
@@ -38,7 +38,21 @@ def test_build_prediction_rows_shapes_fields_correctly():
         "session_id": "s1",
         "recording_context": "clinic",
     }
-    assert rows[1]["sample_id"] == "s2"
+    assert rows[1]["sample_id"] == "/a/2.m4a"
+
+
+def test_build_prediction_rows_uses_file_name_not_session_id_for_sample_id():
+    """Regression test: the real dataset's first 5 streamed records
+    contained a repeated session_id across two different utterances (one
+    session, multiple recorded segments), so session_id cannot be the
+    sample_id -- file_name is the real per-record unique identifier."""
+    records = [
+        {"session_id": "shared", "file_name": "/a/1.m4a", "text": "one", "recording_context": "c"},
+        {"session_id": "shared", "file_name": "/a/2.m4a", "text": "two", "recording_context": "c"},
+    ]
+    rows = build_prediction_rows(records, ["one", "two"], model_id="m")
+    assert rows[0]["sample_id"] != rows[1]["sample_id"]
+    assert rows[0]["session_id"] == rows[1]["session_id"] == "shared"
 
 
 def test_build_prediction_rows_requires_equal_length():
@@ -57,7 +71,7 @@ def test_write_predictions_csv_round_trips(tmp_path):
     with open(path, newline="", encoding="utf-8") as f:
         read_rows = list(csv.DictReader(f))
     assert len(read_rows) == 2
-    assert read_rows[0]["sample_id"] == "s1"
+    assert read_rows[0]["sample_id"] == "/a/1.m4a"
     assert read_rows[0]["hypothesis"] == "hello world"
 
 

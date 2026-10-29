@@ -141,7 +141,15 @@ def build_prediction_rows(
     for record, hypothesis in zip(records, hypotheses):
         rows.append(
             {
-                "sample_id": record.get("session_id"),
+                # `session_id` is NOT a unique per-record identifier: the
+                # real dataset's first 5 streamed records already contained
+                # a repeated session_id across two different utterances
+                # (one session = multiple recorded segments). `file_name`
+                # is the real per-record unique path and is used as the
+                # sample_id instead; `session_id` stays as its own grouping
+                # column so cross-model joins by sample_id are unambiguous.
+                # See docs/ISSUES.md.
+                "sample_id": record.get("file_name"),
                 "reference": record.get("text"),
                 "hypothesis": hypothesis,
                 "model": model_id,

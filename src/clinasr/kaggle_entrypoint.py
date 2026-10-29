@@ -16,6 +16,7 @@ not exercised by this repository's unit tests.
 from __future__ import annotations
 
 import argparse
+import json
 import platform
 import sys
 from pathlib import Path
@@ -26,18 +27,32 @@ from clinasr.schema_audit import audit_records
 from clinasr.smoke_test import MODEL_ID, SMOKE_TEST_N, run_smoke_test
 
 
-def _report_environment() -> None:
-    print(f"python: {sys.version.splitlines()[0]}")
-    print(f"platform: {platform.platform()}")
+def _report_environment() -> dict:
+    """Print AND return the environment report, so a caller with no `logs`
+    command available (this project's kaggle CLI version has none) can
+    persist it to a file instead of losing it once the console closes."""
+    report = {
+        "python": sys.version.splitlines()[0],
+        "platform": platform.platform(),
+        "torch": None,
+        "cuda_available": None,
+        "cuda_device": None,
+    }
+    print(f"python: {report['python']}")
+    print(f"platform: {report['platform']}")
     try:
         import torch  # local import: optional, heavy dependency
 
-        print(f"torch: {torch.__version__}")
-        print(f"cuda_available: {torch.cuda.is_available()}")
-        if torch.cuda.is_available():
-            print(f"cuda_device: {torch.cuda.get_device_name(0)}")
+        report["torch"] = torch.__version__
+        report["cuda_available"] = torch.cuda.is_available()
+        print(f"torch: {report['torch']}")
+        print(f"cuda_available: {report['cuda_available']}")
+        if report["cuda_available"]:
+            report["cuda_device"] = torch.cuda.get_device_name(0)
+            print(f"cuda_device: {report['cuda_device']}")
     except ImportError:
         print("torch: not available in this environment")
+    return report
 
 
 def _self_test_schema_audit() -> None:
@@ -92,7 +107,7 @@ def main(argv=None) -> int:
     )
     args = parser.parse_args(argv)
 
-    _report_environment()
+    env_report = _report_environment()
 
     if args.self_test:
         _self_test_schema_audit()
@@ -100,7 +115,11 @@ def main(argv=None) -> int:
         print("self-test: OK (no inference performed)")
         return 0
 
-    return run_smoke_test(Path(args.output_dir), n=args.n, model_id=args.model_id)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "environment.json").write_text(json.dumps(env_report, indent=2), encoding="utf-8")
+
+    return run_smoke_test(output_dir, n=args.n, model_id=args.model_id)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@
     python scripts/kaggle_workflow.py init --username YOUR_USERNAME
     python scripts/kaggle_workflow.py push --confirm --budget-minutes 30
     python scripts/kaggle_workflow.py status
-    python scripts/kaggle_workflow.py logs
     python scripts/kaggle_workflow.py fetch
 
 `push` is explicitly opt-in: it refuses to run without --confirm and a
@@ -15,12 +14,18 @@ real Kaggle GPU quota -- it is a local paper trail, not quota enforcement.
 `fetch` downloads into a fresh, timestamped subdirectory under results/
 rather than overwriting the previous download, so earlier run outputs are
 never silently lost.
+
+This installed kaggle CLI version (verified: 1.7.4.5) has no `logs`
+subcommand (valid kernels subcommands: list, files, init, push, pull,
+output, status) -- the execution console log is only viewable on the
+Kaggle website at the kernel's URL, printed by `push` on submission.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -33,6 +38,41 @@ META = KAGGLE_DIR / "kernel-metadata.json"
 SCRIPT = KAGGLE_DIR / "run_clinasr.py"
 RESULTS = ROOT / "results"
 BUDGET_LOG = RESULTS / "gpu_budget_log.json"
+KAGGLE_CREDENTIALS_FILE = Path.home() / ".kaggle" / "kaggle.json"
+
+
+def _kaggle_subprocess_env() -> dict:
+    """Return an env for the kaggle CLI subprocess with KAGGLE_API_TOKEN set.
+
+    The installed kaggle CLI (verified: 1.7.4.5) sends classic HTTP Basic
+    auth (username+key from kaggle.json) for every endpoint EXCEPT when the
+    KAGGLE_API_TOKEN env var is set, in which case it switches to Bearer
+    auth (kagglesdk/kaggle_http_client.py's `_try_fill_auth`). As of
+    2026-10-29, Kaggle's Kernels API (push/list/status/logs/output) requires
+    Bearer auth for newer "KGAT_"-prefixed tokens and 401s on Basic auth,
+    while the Datasets API still accepts Basic auth either way -- so this
+    bug is invisible unless you specifically exercise Kernels. Deriving the
+    token from kaggle.json here means the user never has to remember to
+    `export KAGGLE_API_TOKEN=...` themselves. See docs/ISSUES.md.
+    """
+    env = dict(os.environ)
+    # The kaggle CLI itself prints non-ASCII characters (e.g. a checkmark on
+    # success) that crash with 'charmap' codec errors on Windows' default
+    # console codepage; force UTF-8 stdout/stderr for the subprocess so a
+    # cosmetic print doesn't make a successful command look like a failure.
+    env["PYTHONIOENCODING"] = "utf-8"
+    if env.get("KAGGLE_API_TOKEN"):
+        return env
+    if not KAGGLE_CREDENTIALS_FILE.exists():
+        return env
+    try:
+        creds = json.loads(KAGGLE_CREDENTIALS_FILE.read_text(encoding="utf-8"))
+        key = creds.get("key")
+        if key:
+            env["KAGGLE_API_TOKEN"] = key
+    except (json.JSONDecodeError, OSError):
+        pass
+    return env
 
 
 def load_meta():
@@ -58,7 +98,7 @@ def kaggle(args):
         )
     cmd = [executable, "kernels", *args]
     print("Executing:", " ".join(cmd), flush=True)
-    return subprocess.call(cmd, cwd=str(ROOT))
+    return subprocess.call(cmd, cwd=str(ROOT), env=_kaggle_subprocess_env())
 
 
 def _get_git_commit() -> str:
@@ -116,7 +156,6 @@ def main():
     )
 
     sub.add_parser("status", help="Check latest GPU job status")
-    sub.add_parser("logs", help="Print GPU job logs")
     sub.add_parser("fetch", help="Download results into a new timestamped results/ subdirectory")
     args = parser.parse_args()
 
@@ -163,11 +202,14 @@ def main():
         if args.budget_minutes is None or args.budget_minutes <= 0:
             raise RuntimeError("Pass --budget-minutes N (your own estimate) along with --confirm.")
         _append_budget_log(kernel_id, args.budget_minutes)
-        return kaggle(["push", "-p", str(KAGGLE_DIR), "--accelerator", "NvidiaTeslaT4"])
+        # This kaggle CLI version has no --accelerator flag; GPU/machine shape
+        # come from kernel-metadata.json's enable_gpu/machine_shape (set by
+        # `init`). -t/--timeout is in seconds and actually enforces the
+        # requested budget server-side, rather than only logging it locally.
+        timeout_seconds = int(args.budget_minutes * 60)
+        return kaggle(["push", "-p", str(KAGGLE_DIR), "-t", str(timeout_seconds)])
     if args.command == "status":
         return kaggle(["status", kernel_id])
-    if args.command == "logs":
-        return kaggle(["logs", kernel_id])
     if args.command == "fetch":
         RESULTS.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
