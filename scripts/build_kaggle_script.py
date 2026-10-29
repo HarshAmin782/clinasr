@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -73,13 +74,34 @@ def _get_git_commit() -> str:
     return out.stdout.strip() if out.returncode == 0 else "unknown"
 
 
+_MODULE_IMPORT = re.compile(r"^\s*(from clinasr import |import clinasr\.)")
+
+
+def check_flat_imports(module_name: str, source: str) -> None:
+    """Reject `from clinasr import <module>` / `import clinasr.x`: the
+    bundle is one flat namespace, so a module-qualified reference such as
+    `stage2.select` would raise NameError on Kaggle (it did, Stage 4 v3).
+    Import the needed names directly instead."""
+    for lineno, line in enumerate(source.splitlines(), 1):
+        if _MODULE_IMPORT.match(line):
+            raise ValueError(f"src/clinasr/{module_name}.py:{lineno}: module import not allowed in bundled code: {line.strip()}")
+
+
 def _strip_module_source(source: str) -> str:
     kept_lines: List[str] = []
+    in_paren_import = False
     for line in source.splitlines():
         stripped = line.strip()
+        if in_paren_import:
+            # Continuation of a stripped `from clinasr.x import (` block.
+            if ")" in stripped:
+                in_paren_import = False
+            continue
         if stripped == _FUTURE_IMPORT:
             continue
         if any(stripped.startswith(p) for p in _STRIP_PREFIXES):
+            if "(" in stripped and ")" not in stripped:
+                in_paren_import = True
             continue
         kept_lines.append(line)
     return "\n".join(kept_lines)
@@ -99,6 +121,7 @@ def build(module_order: List[str] = MODULE_ORDER) -> str:
     for module_name in module_order:
         module_path = SRC_DIR / f"{module_name}.py"
         source = module_path.read_text(encoding="utf-8")
+        check_flat_imports(module_name, source)
         digest = hashlib.sha256(source.encode("utf-8")).hexdigest()[:16]
         parts.append("")
         parts.append(f"# ---- begin src/clinasr/{module_name}.py (sha256:{digest}) ----")

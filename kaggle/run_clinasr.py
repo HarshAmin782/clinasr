@@ -1,7 +1,7 @@
 """GENERATED FILE -- DO NOT EDIT DIRECTLY.
 
 Built by scripts/build_kaggle_script.py from src/clinasr/*.py.
-Source commit: 2a5f09ac9fbd
+Source commit: e38c094e38b7
 To change behavior, edit the source modules under src/clinasr/ and
 rebuild. This file is what Kaggle CLI uploads as the single code_file.
 """
@@ -1797,7 +1797,7 @@ def run_stage2(output_dir: Path, expected_fingerprint: Optional[str] = None) -> 
     return 0
 # ---- end src/clinasr/stage2.py ----
 
-# ---- begin src/clinasr/stage4.py (sha256:36804acbd8610911) ----
+# ---- begin src/clinasr/stage4.py (sha256:1605bd05f3694591) ----
 """Stage 4: noise robustness on the Stage 2 sample set.
 
 Same 300 samples (same fingerprint check as Stage 2), same two pinned
@@ -1870,27 +1870,27 @@ def run_stage4(output_dir: Path) -> int:
     handle = new_run(output_dir / "run", git_commit=get_git_commit())
     logger = handle.get_logger()
 
-    selection = stage2.select(stage2.load_metadata())
+    selection = select(load_metadata())
     (output_dir / "selection.json").write_text(json.dumps(dataclasses.asdict(selection), indent=2), encoding="utf-8")
-    if selection.fingerprint != stage2.STAGE2_EXPECTED_FINGERPRINT:
+    if selection.fingerprint != STAGE2_EXPECTED_FINGERPRINT:
         print(f"ERROR: selection fingerprint {selection.fingerprint} != expected; aborting before inference.")
         return 2
-    clean_records = stage2.load_selected_audio(selection.sample_ids)
+    clean_records = load_selected_audio(selection.sample_ids)
 
     predictions, summaries, noise_log, timings = [], [], [], {}
     for snr in SNRS_DB:
         cond = condition_name(snr)
         records, log = noisy_records(clean_records, snr)
         noise_log.extend(log)
-        for model_id, revision in stage2.MODELS.items():
+        for model_id, revision in MODELS.items():
             print(f"[{cond}] {model_id} ...")
-            result = stage2.transcribe(records, model_id, revision)
+            result = transcribe(records, model_id, revision)
             timings[f"{cond}/{model_id}"] = {k: result[k] for k in ("seconds", "device", "dtype")}
-            rows = stage2.prediction_rows(records, result["hypotheses"], model_id)
+            rows = prediction_rows(records, result["hypotheses"], model_id)
             for row in rows:
                 row["condition"] = cond
             predictions.extend(rows)
-            for s in stage2.summary_rows(rows, model_id, DEFAULT_NORMALIZATION):
+            for s in summary_rows(rows, model_id, DEFAULT_NORMALIZATION):
                 s["condition"] = cond
                 summaries.append(s)
             logger.info("%s %s done in %.1fs", cond, model_id, result["seconds"])
@@ -1900,22 +1900,22 @@ def run_stage4(output_dir: Path) -> int:
     _write_csv(output_dir / "noise_log.csv", noise_log)
 
     config = ExperimentConfig(
-        dataset_id=stage2.DATASET_ID,
-        dataset_config=stage2.DATASET_CONFIG,
-        dataset_split=stage2.DATASET_SPLIT,
-        seed=stage2.STAGE2_SEED,
+        dataset_id=DATASET_ID,
+        dataset_config=DATASET_CONFIG,
+        dataset_split=DATASET_SPLIT,
+        seed=STAGE2_SEED,
         sample_selection=SampleSelection(
             method="stratified_hash_ranked",
             size=len(selection.sample_ids),
-            stratify_by=list(stage2.STRATA_KEYS),
+            stratify_by=list(STRATA_KEYS),
             sample_ids=list(selection.sample_ids),
         ),
-        models=[ModelSpec(model_id=m, resolved_revision=r) for m, r in stage2.MODELS.items()],
+        models=[ModelSpec(model_id=m, resolved_revision=r) for m, r in MODELS.items()],
         normalization=DEFAULT_NORMALIZATION,
         noise=NoiseConfig(snrs_db=list(SNRS_DB), seed=NOISE_SEED),
         metrics=["wer", "cer"],
         software_versions=resolve_installed_versions(["jiwer", "numpy", "torch", "transformers", "datasets", "torchcodec"]),
-        dataset_revision=stage2.DATASET_REVISION,
+        dataset_revision=DATASET_REVISION,
     )
     (output_dir / "experiment_config.json").write_text(config.to_json(), encoding="utf-8")
     statuses: Dict[str, int] = {}

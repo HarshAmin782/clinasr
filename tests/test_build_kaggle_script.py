@@ -77,3 +77,38 @@ def test_check_mode_fails_when_output_stale(tmp_path, monkeypatch):
     fake_output.write_text("stale content that does not match a fresh build\n", encoding="utf-8")
     monkeypatch.setattr(build_kaggle_script, "OUTPUT_PATH", fake_output)
     assert build_kaggle_script.main(["--check"]) == 1
+
+
+def test_module_style_imports_are_rejected():
+    import pytest
+
+    with pytest.raises(ValueError, match="module import not allowed"):
+        build_kaggle_script.check_flat_imports("x", "from clinasr import stage2\n")
+    with pytest.raises(ValueError):
+        build_kaggle_script.check_flat_imports("x", "import clinasr.stage2\n")
+    build_kaggle_script.check_flat_imports("x", "from clinasr.stage2 import select\n")
+
+
+def test_bundle_executes_stage_modules_without_name_errors(tmp_path):
+    """Import-time execution of the whole bundle plus resolving every
+    top-level function's global names catches flat-namespace NameErrors."""
+    import ast
+    import builtins
+
+    source = build_kaggle_script.build()
+    tree = ast.parse(source)
+    defined = set(dir(builtins))
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+            defined.add(node.name)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                defined.add((alias.asname or alias.name).split(".")[0])
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            defined.add(node.id)
+        elif isinstance(node, ast.arg):
+            defined.add(node.arg)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            defined.add(node.name)
+    loads = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)}
+    assert sorted(loads - defined) == []
